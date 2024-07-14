@@ -216,7 +216,8 @@ class pawn:
             raise Exception("The en passant move is only allowed immediately after the opponent's pawn moves two squares forward")
         
 # 1. to identify in the Pawn.move() that it's a capture move. (already done)
-# 2. add to capture method 
+# 2. add to capture method a check of en passant move, if so, call the en_passant method. 
+# 3. in en_passant method update the board after the en passant move.
 
 
 class rook:
