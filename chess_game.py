@@ -171,11 +171,13 @@ class pawn:
     def __init__(self, color, position):
         self.color = color
         self.position = position
+        self.two_squares = False
 
     def __repr__(self) -> str:
         return '  P '
 
     def move(self, new_position, promotion_piece=None, game=None):
+        self.two_squares = False
         # check if it's a capture move
         if abs(ord(new_position[0]) - ord(self.position[0])) == 1:
             if int(new_position[1]) - int(self.position[1]) == 1 and game.player_turn == 0 or \
@@ -190,6 +192,11 @@ class pawn:
             raise Exception("Pawns can't move more than 2 squares")
         if int(new_position[1]) - int(self.position[1]) == 2 and self.position[1] != '2':
             raise Exception("Pawns can move 2 squares only from their opening position")
+        # check if it's a 2 squares move
+        if self.color == 'white' and self.position[1] == '2' and new_position[1] == '4':
+            self.two_squares = True 
+        if self.color == 'black' and self.position[1] == '7' and new_position[1] == '5':
+            self.two_squares = True
         self.position = new_position 
         # check if the pawn can be promoted
         if self.position[1] == 7 or self.position[1] == 0:
@@ -201,7 +208,11 @@ class pawn:
         self.__class__ = new_piece(self.color)
         
     def capture(self, new_position, game):
-        # print("in pawn class: ", board)
+        # check if it's an en passant move
+        piece_to_capture = game.board[4][ord(new_position[0]) - 97]
+        if game.player_turn == 0 and int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True
+        # or game.player_turn == 1 and int(self.position[1]) == 4:
+        #     self.en_passant(new_position, game)
         target_square_indices = game.sqaure_conversion_to_indices(new_position)
         target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
         if target_sqaure_piece is None:
@@ -217,6 +228,8 @@ class pawn:
         
 # 1. to identify in the Pawn.move() that it's a capture move. (already done)
 # 2. add to capture method a check of en passant move, if so, call the en_passant method. 
+# the problem is that if I use a flag of the pawn class then if the opponent don't capture en passant in the next move, the flag will remain True while it should be False.
+# so I should use a flag in the board class that will be reset after each move.
 # 3. in en_passant method update the board after the en passant move.
 
 
