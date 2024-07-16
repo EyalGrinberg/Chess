@@ -1,6 +1,7 @@
 class board:
     def __init__(self):
         self.player_turn = 0 # 0 for white, 1 for black
+        self.last_piece_moved = None
         # board initialzation
         self.board = [[None for i in range(8)] for i in range(8)]
         # pieces
@@ -83,6 +84,7 @@ class board:
             piece.move(new_position, game=self)
             self.board[new_position_indices[0]][new_position_indices[1]] = piece
             self.board[old_position_indices[0]][old_position_indices[1]] = None     
+            self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
         # promotion case
         elif len(cmd_input) == 5:
@@ -209,10 +211,16 @@ class pawn:
         
     def capture(self, new_position, game):
         # check if it's an en passant move
-        piece_to_capture = game.board[4][ord(new_position[0]) - 97]
-        if game.player_turn == 0 and int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True
-        # or game.player_turn == 1 and int(self.position[1]) == 4:
-        #     self.en_passant(new_position, game)
+        if game.player_turn == 0:
+            piece_to_capture = game.board[4][ord(new_position[0]) - 97]
+            if piece_to_capture is not None:
+                if int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True and game.last_piece_moved == piece_to_capture:
+                    self.en_passant(new_position, game)
+        else:
+            piece_to_capture = game.board[3][ord(new_position[0]) - 97]
+            if piece_to_capture is not None:
+                if int(self.position[1]) == 4 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True and game.last_piece_moved == piece_to_capture:
+                    self.en_passant(new_position, game)
         target_square_indices = game.sqaure_conversion_to_indices(new_position)
         target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
         if target_sqaure_piece is None:
@@ -223,6 +231,7 @@ class pawn:
             self.position = new_position          
 
     def en_passant(self, new_position, game):
+        # TODO: update the board after the en passant move
         if game.player_turn == 0 and int(self.position[1]) != 4 or game.player_turn == 1 and int(self.position[1]) != 4:
             raise Exception("The en passant move is only allowed immediately after the opponent's pawn moves two squares forward")
         
