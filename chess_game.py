@@ -86,6 +86,12 @@ class board:
             self.board[old_position_indices[0]][old_position_indices[1]] = None     
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
+            
+            # debugging
+            # white_rook_a1 = self.board[0][0]
+            # white_rook_a1.update_reachable_squares(self.board)
+            
+            
         # promotion case
         elif len(cmd_input) == 5:
             for i in (0, 2):
@@ -167,7 +173,7 @@ class board:
 # 1. work on pawn captures. V
 # 2. work on pins and checks. - use the king threat attribute for identifying it
 # 3. work on the checkmate and stalemate conditions.   
-# 4. work on the en passant move.
+# 4. work on the en passant move. V
 # 5. add letters and numbers to the board visualization.
 # 6. work on castle rights when the cstling squares are threatened. - use the king threat attribute for identifying it
 
@@ -178,6 +184,7 @@ class pawn:
         self.position = position
         self.two_squares = False
         self.is_en_passant = False
+        # self.threating_squares = 
 
     def __repr__(self) -> str:
         return '  P '
@@ -248,7 +255,8 @@ class pawn:
         else:
             game.board[3][ord(new_position[0]) - 97] = None
         self.position = new_position          
-                    
+   
+   # I think I implemented it well, but I still need to make sure.                 
 # 1. to identify in the Pawn.move() that it's a capture move. (already done)
 # 2. add to capture method a check of en passant move, if so, call the en_passant method. 
 # the problem is that if I use a flag of the pawn class then if the opponent don't capture en passant in the next move, the flag will remain True while it should be False.
@@ -261,15 +269,69 @@ class rook:
         self.color = color
         self.position = position
         self.is_castle_legal = True
+        self.reachable_squares = []
 
     def __repr__(self) -> str:
         return '  R '
 
-    def move(self, new_position, board=None):
+    def move(self, new_position, game=None):
         if new_position[0] != self.position[0] and new_position[1] != self.position[1]:
             raise Exception("Rooks can only move in straight lines")
         self.position = new_position 
         self.is_castle_legal = False
+    
+    def update_reachable_squares(self, board):
+        self.reachable_squares = []
+        # check the squares to the right
+        if ord(self.position[0]) - 97 < 7:
+            for col in range(ord(self.position[0]) - 97 + 1, 8):
+                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color == self.color:
+                    break
+                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color != self.color:
+                    # add the last square that can be reached if the rook captures a piece of the opposite color
+                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+                    print('before break right')
+                    break
+                # add the square if it's empty
+                if board[int(self.position[1]) - 1][col] is None:
+                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+        # check the squares to the left
+        if ord(self.position[0]) - 97 > 0:
+            for col in range(ord(self.position[0]) - 97 - 1, -1, -1):
+                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color == self.color:
+                    break
+                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color != self.color:
+                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+                    print('before break left') 
+                    break
+                if board[int(self.position[1]) - 1][col] is None:
+                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+        # check the squares below
+        print('before below')
+        print(self.reachable_squares)
+        if int(self.position[1]) < 8:
+            for row in range(int(self.position[1]), 8):
+                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color == self.color:
+                    break
+                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color != self.color:
+                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
+                    print('before break below') 
+                    print(self.reachable_squares)
+                    break
+                print("if 2")
+                if board[row][ord(self.position[0]) - 97] is None:
+                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
+        # check the squares above
+        if int(self.position[1]) > 1:
+            for row in range(int(self.position[1]) - 1, -1, -1):
+                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color == self.color:
+                    break
+                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color != self.color:
+                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
+                    print('before break above') 
+                    break
+                if board[row][ord(self.position[0]) - 97] is None:
+                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
         
 class knight:
     def __init__(self, color, position):
@@ -279,7 +341,7 @@ class knight:
     def __repr__(self) -> str:
         return '  N '
 
-    def move(self, new_position, board=None):
+    def move(self, new_position, game=None):
         if abs(ord(new_position[0]) - ord(self.position[0])) == 2 and abs(ord(new_position[1]) - ord(self.position[1])) == 1:
             self.position = new_position
         elif abs(ord(new_position[0]) - ord(self.position[0])) == 1 and abs(ord(new_position[1]) - ord(self.position[1])) == 2:
@@ -327,9 +389,7 @@ class king:
         if abs(ord(new_position[0]) - ord(self.position[0])) > 1 or abs(int(new_position[1]) - int(self.position[1])) > 1:
             raise Exception("Kings can only move one square in any direction")
         self.position = new_position
-        self.is_castle_legal = False
-
-
+        self.is_castle_legal = False    
 
 
 
@@ -348,6 +408,10 @@ def play_game():
         except Exception as e:
             print(e)
             continue
+        
+        # # debugging
+        # white_rook_a1 = game.board[0][0]
+        # print('white_rook_a1 reachable squares: ', white_rook_a1.reachable_squares)
 
 if __name__ == "__main__":
     play_game()
