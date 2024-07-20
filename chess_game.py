@@ -1,7 +1,7 @@
 class board:
     def __init__(self):
         self.player_turn = 0 # 0 for white, 1 for black
-        self.last_piece_moved = None
+        self.last_piece_moved = None # used for checking en passant case
         # board initialzation
         self.board = [[None for i in range(8)] for i in range(8)]
         # pieces
@@ -109,6 +109,7 @@ class board:
             piece.move(new_position, promotion_piece, self.board)
             self.board[new_position_indices[0]][new_position_indices[1]] = piece
             self.board[old_position_indices[0]][old_position_indices[1]] = None
+            self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
         # short castle case
         elif cmd_input == 'O-O':
@@ -132,6 +133,7 @@ class board:
                     rook.position = 'f8'
                     self.board[7][4] = None
                     self.board[7][7] = None
+            self.last_piece_moved = None # it doesn't really matter in castle case
             self.player_turn = 1 - self.player_turn
         # long castle case
         elif cmd_input == 'O-O-O':
@@ -155,6 +157,7 @@ class board:
                     rook.position = 'd8'
                     self.board[7][4] = None
                     self.board[7][0] = None 
+            self.last_piece_moved = None
             self.player_turn = 1 - self.player_turn
         else: # if the input length is not 4, and neither a promotion nor a 
             # castle move ('e7e8', 'O-O', 'O-O-O') - it means it's an invalid move.     
@@ -174,11 +177,13 @@ class pawn:
         self.color = color
         self.position = position
         self.two_squares = False
+        self.is_en_passant = False
 
     def __repr__(self) -> str:
         return '  P '
 
     def move(self, new_position, promotion_piece=None, game=None):
+        self.is_en_passant = False # turn the en passant flag off
         self.two_squares = False
         # check if it's a capture move
         if abs(ord(new_position[0]) - ord(self.position[0])) == 1:
@@ -211,36 +216,45 @@ class pawn:
         
     def capture(self, new_position, game):
         # check if it's an en passant move
-        if game.player_turn == 0:
+        if game.player_turn == 0: # white takes black's pawn en passant
             piece_to_capture = game.board[4][ord(new_position[0]) - 97]
             if piece_to_capture is not None:
-                if int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True and game.last_piece_moved == piece_to_capture:
-                    self.en_passant(new_position, game)
-        else:
+                if int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True \
+                    and game.last_piece_moved == piece_to_capture and new_position[0] == piece_to_capture.position[0] and new_position[1] == '6':
+                        self.is_en_passant = True
+                        self.en_passant(new_position, game)
+        else: # black takes white's pawn en passant
             piece_to_capture = game.board[3][ord(new_position[0]) - 97]
             if piece_to_capture is not None:
-                if int(self.position[1]) == 4 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True and game.last_piece_moved == piece_to_capture:
-                    self.en_passant(new_position, game)
-        target_square_indices = game.sqaure_conversion_to_indices(new_position)
-        target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
-        if target_sqaure_piece is None:
-            raise Exception("there is no piece to capture at this square") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
-        elif target_sqaure_piece.color == 'white' and game.player_turn == 0 or target_sqaure_piece.color == 'black' and game.player_turn == 1:
-            raise Exception("A pawn cannot capture pieces of it's own color") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
-        else:
-            self.position = new_position          
+                if int(self.position[1]) == 4 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True \
+                    and game.last_piece_moved == piece_to_capture and new_position[0] == piece_to_capture.position[0] and new_position[1] == '3':
+                        self.is_en_passant = True
+                        self.en_passant(new_position, game)
+        # if it is not an en passant capture it's a regular capture
+        if self.is_en_passant == False:
+            target_square_indices = game.sqaure_conversion_to_indices(new_position)
+            target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
+            if target_sqaure_piece is None:
+                raise Exception("there is no piece to capture at this square") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
+            elif target_sqaure_piece.color == 'white' and game.player_turn == 0 or target_sqaure_piece.color == 'black' and game.player_turn == 1:
+                raise Exception("A pawn cannot capture pieces of it's own color") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
+            else:
+                self.position = new_position          
 
     def en_passant(self, new_position, game):
-        # TODO: update the board after the en passant move
-        if game.player_turn == 0 and int(self.position[1]) != 4 or game.player_turn == 1 and int(self.position[1]) != 4:
-            raise Exception("The en passant move is only allowed immediately after the opponent's pawn moves two squares forward")
-        
+        # update the board after the en passant move, the 'move_piece' method updates everything except the opponent's pawn being taken
+        if game.player_turn == 0:
+            game.board[4][ord(new_position[0]) - 97] = None
+        else:
+            game.board[3][ord(new_position[0]) - 97] = None
+        self.position = new_position          
+                    
 # 1. to identify in the Pawn.move() that it's a capture move. (already done)
 # 2. add to capture method a check of en passant move, if so, call the en_passant method. 
 # the problem is that if I use a flag of the pawn class then if the opponent don't capture en passant in the next move, the flag will remain True while it should be False.
 # so I should use a flag in the board class that will be reset after each move.
 # 3. in en_passant method update the board after the en passant move.
-
+        
 
 class rook:
     def __init__(self, color, position):
@@ -337,3 +351,4 @@ def play_game():
 
 if __name__ == "__main__":
     play_game()
+    
