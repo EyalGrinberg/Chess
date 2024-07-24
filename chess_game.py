@@ -80,16 +80,20 @@ class board:
             target_square = self.board[new_position_indices[0]][new_position_indices[1]]
             if target_square is not None and target_square.color == piece.color:
                 raise ValueError("The new position is already occupied")
-            # print("in board class: ", self.board)
             piece.move(new_position, game=self)
             self.board[new_position_indices[0]][new_position_indices[1]] = piece
             self.board[old_position_indices[0]][old_position_indices[1]] = None     
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
             
+            # add logic of updating the reachable squares of all the pieces after moving a piece (nested loop)
+            
             # debugging
             # white_rook_a1 = self.board[0][0]
             # white_rook_a1.update_reachable_squares(self.board)
+            
+            white_bishop_c1 = self.board[0][2]
+            white_bishop_c1.update_reachable_squares(self.board)
             
             
         # promotion case
@@ -281,62 +285,66 @@ class rook:
         self.is_castle_legal = False
     
     def update_reachable_squares(self, board):
+        # maybe modularize the code by creating a helper function that checks the squares in a certain direction (the for loop part)
         self.reachable_squares = []
+        piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        piece_row = int(self.position[1]) - 1 # 0,1,...,7
         # check the squares to the right
-        if ord(self.position[0]) - 97 < 7:
-            for col in range(ord(self.position[0]) - 97 + 1, 8):
-                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color == self.color:
-                    break
-                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color != self.color:
-                    # add the last square that can be reached if the rook captures a piece of the opposite color
-                    self.reachable_squares.append((int(self.position[1]) - 1, col))
-                    print('before break right')
-                    break
-                # add the square if it's empty
-                if board[int(self.position[1]) - 1][col] is None:
-                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+        if piece_col < 7:
+            for col in range(piece_col + 1, 8):
+                square = board[piece_row][col]
+                # check if there's a piece of the same color in the way
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: # add the last square that can be reached if the rook captures a piece of the opposite color
+                        self.reachable_squares.append((piece_row, col))
+                        break
+                else: # add the square if it's empty
+                    self.reachable_squares.append((piece_row, col))
         # check the squares to the left
-        if ord(self.position[0]) - 97 > 0:
-            for col in range(ord(self.position[0]) - 97 - 1, -1, -1):
-                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color == self.color:
-                    break
-                if board[int(self.position[1]) - 1][col] is not None and board[int(self.position[1]) - 1][col].color != self.color:
-                    self.reachable_squares.append((int(self.position[1]) - 1, col))
-                    print('before break left') 
-                    break
-                if board[int(self.position[1]) - 1][col] is None:
-                    self.reachable_squares.append((int(self.position[1]) - 1, col))
+        if piece_col > 0:
+            for col in range(piece_col - 1, -1, -1):
+                square = board[piece_row][col]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((piece_row, col))
+                        break
+                else: 
+                    self.reachable_squares.append((piece_row, col))
         # check the squares below
-        print('before below')
-        print(self.reachable_squares)
-        if int(self.position[1]) < 8:
-            for row in range(int(self.position[1]), 8):
-                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color == self.color:
-                    break
-                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color != self.color:
-                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
-                    print('before break below') 
-                    print(self.reachable_squares)
-                    break
-                print("if 2")
-                if board[row][ord(self.position[0]) - 97] is None:
-                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
+        if piece_row < 7:
+            for row in range(piece_row + 1, 8):
+                square = board[row][piece_col]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((row, piece_col))
+                        break
+                else: 
+                    self.reachable_squares.append((row, piece_col))
         # check the squares above
-        if int(self.position[1]) > 1:
-            for row in range(int(self.position[1]) - 1, -1, -1):
-                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color == self.color:
-                    break
-                if board[row][ord(self.position[0]) - 97] is not None and board[row][ord(self.position[0]) - 97].color != self.color:
-                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
-                    print('before break above') 
-                    break
-                if board[row][ord(self.position[0]) - 97] is None:
-                    self.reachable_squares.append((row, ord(self.position[0]) - 97))
+        if piece_row > 0:
+            for row in range(piece_row, -1, -1):
+                square = board[row][piece_col]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((row, piece_col))
+                        break
+                else: 
+                    self.reachable_squares.append((row, piece_col))
+                          
         
 class knight:
     def __init__(self, color, position):
         self.color = color
         self.position = position
+        self.reachable_squares = []
 
     def __repr__(self) -> str:
         return '  N '
@@ -361,6 +369,60 @@ class bishop:
         if abs(ord(new_position[0]) - ord(self.position[0])) != abs(int(new_position[1]) - int(self.position[1])):
             raise Exception("Bishops move diagonally")
         self.position = new_position
+        
+    def update_reachable_squares(self, board):
+        self.reachable_squares = []
+        piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        # check the squares to the right and down
+        if piece_col < 7 and piece_row < 7:
+            for i in range(1, min(8 - piece_row, 8 - piece_col)):
+                square = board[piece_row + i][piece_col + i]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((piece_row + i, piece_col + i))
+                        break
+                else: 
+                    self.reachable_squares.append((piece_row + i, piece_col + i))
+        # check the squares to the left and down
+        if piece_col > 0 and piece_row < 7:
+            for i in range(1, min(8 - piece_row, piece_col + 1)):
+                square = board[piece_row + i][piece_col - i]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((piece_row + i, piece_col - i))
+                        break
+                else: 
+                    self.reachable_squares.append((piece_row + i, piece_col - i))
+        # check the squares to the right and up
+        if piece_col < 7 and piece_row > 0:
+            for i in range(1, min(piece_row + 1, 8 - piece_col)):
+                square = board[piece_row - i][piece_col + i]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((piece_row - i, piece_col + i))
+                        break
+                else: 
+                    self.reachable_squares.append((piece_row - i, piece_col + i))
+        # check the squares to the left and up
+        if piece_col > 0 and piece_row > 0:
+            for i in range(1, min(piece_row + 1, piece_col + 1)):
+                square = board[piece_row - i][piece_col - i]
+                if square is not None:
+                    if square.color == self.color:
+                        break
+                    else: 
+                        self.reachable_squares.append((piece_row - i, piece_col - i))
+                        break
+                else: 
+                    self.reachable_squares.append((piece_row - i, piece_col - i))
+                      
         
 class queen:
     def __init__(self, color, position):
@@ -409,9 +471,12 @@ def play_game():
             print(e)
             continue
         
-        # # debugging
+        # debugging
         # white_rook_a1 = game.board[0][0]
         # print('white_rook_a1 reachable squares: ', white_rook_a1.reachable_squares)
+        
+        white_bishop_c1 = game.board[0][2]
+        print('white bishop C1 reachable squares: ', white_bishop_c1.reachable_squares)
 
 if __name__ == "__main__":
     play_game()
