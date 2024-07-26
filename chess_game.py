@@ -1,4 +1,4 @@
-class board:
+class game:
     def __init__(self):
         self.player_turn = 0 # 0 for white, 1 for black
         self.last_piece_moved = None # used for checking en passant case
@@ -37,7 +37,7 @@ class board:
                             ]
     """ 
     
-    def __repr__(self):
+    def __repr__(self): # should also revert the board to its original state 
        return "\n".join([str(row) for row in self.board])
     
     def sqaure_conversion_to_indices(self, square):
@@ -60,6 +60,13 @@ class board:
         if square[1] not in '12345678':
             raise ValueError("The second character should be a number between '1' and '8'")
         return (int(square[1]) - 1, conversion_dict[square[0]])
+    
+    def update_reachable_squares_for_all_pieces(self):
+            # update the reachable squares of all the pieces after moving a piece
+            for row in self.board:
+                for square in row:
+                    if square is not None:
+                        square.update_reachable_squares(self.board) 
     
     def move_piece(self, cmd_input):
         old_position = cmd_input[:2]
@@ -85,6 +92,7 @@ class board:
             self.board[old_position_indices[0]][old_position_indices[1]] = None     
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
             
             # add logic of updating the reachable squares of all the pieces after moving a piece (nested loop)
             
@@ -92,8 +100,17 @@ class board:
             # white_rook_a1 = self.board[0][0]
             # white_rook_a1.update_reachable_squares(self.board)
             
-            white_bishop_c1 = self.board[0][2]
-            white_bishop_c1.update_reachable_squares(self.board)
+            # white_bishop_c1 = self.board[0][2]
+            # white_bishop_c1.update_reachable_squares(self.board)
+            
+            # white_queen_d1 = self.board[0][3]
+            # white_queen_d1.update_reachable_squares(self.board)
+            
+            # white_knight_b1 = self.board[0][1]
+            # white_knight_b1.update_reachable_squares(self.board)
+            
+            # white_pawn_a2 = self.board[1][0]
+            # white_pawn_a2.update_reachable_squares(self.board)
             
             
         # promotion case
@@ -121,6 +138,7 @@ class board:
             self.board[old_position_indices[0]][old_position_indices[1]] = None
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
         # short castle case
         elif cmd_input == 'O-O':
             if self.player_turn == 0: # white player
@@ -145,6 +163,7 @@ class board:
                     self.board[7][7] = None
             self.last_piece_moved = None # it doesn't really matter in castle case
             self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
         # long castle case
         elif cmd_input == 'O-O-O':
             if self.player_turn == 0: # white player
@@ -169,9 +188,12 @@ class board:
                     self.board[7][0] = None 
             self.last_piece_moved = None
             self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
         else: # if the input length is not 4, and neither a promotion nor a 
             # castle move ('e7e8', 'O-O', 'O-O-O') - it means it's an invalid move.     
-            raise Exception("Invalid move")       
+            raise Exception("Invalid move")     
+        
+        
             
             
 # 1. work on pawn captures. V
@@ -182,13 +204,13 @@ class board:
 # 6. work on castle rights when the cstling squares are threatened. - use the king threat attribute for identifying it
 
     
-class pawn:
+class pawn: # add inheritance from game and use its conversion method
     def __init__(self, color, position):
         self.color = color
         self.position = position
         self.two_squares = False
         self.is_en_passant = False
-        # self.threating_squares = 
+        self.threating_squares = [] # squares that the pawn can capture or threat
 
     def __repr__(self) -> str:
         return '  P '
@@ -258,7 +280,25 @@ class pawn:
             game.board[4][ord(new_position[0]) - 97] = None
         else:
             game.board[3][ord(new_position[0]) - 97] = None
-        self.position = new_position          
+        self.position = new_position        
+        
+    def update_reachable_squares(self, board):
+        self.threating_squares = []
+        piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        if self.color == 'white':
+            if piece_row < 7:
+                if piece_col > 0:
+                    self.threating_squares.append((piece_row + 1, piece_col - 1))
+                if piece_col < 7:
+                    self.threating_squares.append((piece_row + 1, piece_col + 1))
+        else:
+            if piece_row > 0:
+                if piece_col > 0:
+                    self.threating_squares.append((piece_row - 1, piece_col - 1))
+                if piece_col < 7:
+                    self.threating_squares.append((piece_row - 1, piece_col + 1))
+        
    
    # I think I implemented it well, but I still need to make sure.                 
 # 1. to identify in the Pawn.move() that it's a capture move. (already done)
@@ -328,7 +368,7 @@ class rook:
                     self.reachable_squares.append((row, piece_col))
         # check the squares above
         if piece_row > 0:
-            for row in range(piece_row, -1, -1):
+            for row in range(piece_row - 1, -1, -1):
                 square = board[row][piece_col]
                 if square is not None:
                     if square.color == self.color:
@@ -338,7 +378,7 @@ class rook:
                         break
                 else: 
                     self.reachable_squares.append((row, piece_col))
-                          
+        return self.reachable_squares                  
         
 class knight:
     def __init__(self, color, position):
@@ -356,16 +396,30 @@ class knight:
             self.position = new_position
         else:
             raise Exception("Knights move in an L shape")
+        
+    def update_reachable_squares(self, board):
+        self.reachable_squares = []
+        piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        eight_squares = [(piece_row + 2, piece_col + 1), (piece_row + 2, piece_col - 1), (piece_row - 2, piece_col + 1), (piece_row - 2, piece_col - 1), 
+                         (piece_row + 1, piece_col + 2), (piece_row + 1, piece_col - 2), (piece_row - 1, piece_col + 2), (piece_row - 1, piece_col - 2)]
+        for square in eight_squares:
+            if 0 <= square[0] <= 7 and 0 <= square[1] <= 7:
+                square_piece = board[square[0]][square[1]]
+                if square_piece is None or square_piece.color != self.color:
+                    self.reachable_squares.append(square)
+        
 
 class bishop:
     def __init__(self, color, position):
         self.color = color
         self.position = position
+        self.reachable_squares = []
 
     def __repr__(self) -> str:
         return '  B '
 
-    def move(self, new_position, board=None):
+    def move(self, new_position, game=None):
         if abs(ord(new_position[0]) - ord(self.position[0])) != abs(int(new_position[1]) - int(self.position[1])):
             raise Exception("Bishops move diagonally")
         self.position = new_position
@@ -422,51 +476,74 @@ class bishop:
                         break
                 else: 
                     self.reachable_squares.append((piece_row - i, piece_col - i))
-                      
+        return self.reachable_squares           
         
-class queen:
+class queen(bishop, rook):
     def __init__(self, color, position):
         self.color = color
         self.position = position
+        self.reachable_squares = []
 
     def __repr__(self) -> str:
         return '  Q '
 
-    def move(self, new_position, board=None):
+    def move(self, new_position, game=None):
         if new_position[0] != self.position[0] and new_position[1] != self.position[1] \
             and abs(ord(new_position[0]) - ord(self.position[0])) != abs(int(new_position[1]) - int(self.position[1])):
             raise Exception("Queens can move in straight lines and diagonally")
         self.position = new_position
+        
+    def update_reachable_squares(self, board):
+        self.reachable_squares = []
+        # piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        # piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        diag_squares = bishop.update_reachable_squares(self, board=board)
+        non_diag_squares = rook.update_reachable_squares(self, board=board)
+        self.reachable_squares = diag_squares + non_diag_squares
+        
+        
 
 class king:
     def __init__(self, color, position):
         self.color = color
         self.position = position
         self.is_castle_legal = True
+        self.reachable_squares = [] # including threatened squares
 
     def __repr__(self) -> str:
         return '  K '
 
-    def move(self, new_position, board=None):
+    def move(self, new_position, game=None):
         if abs(ord(new_position[0]) - ord(self.position[0])) > 1 or abs(int(new_position[1]) - int(self.position[1])) > 1:
             raise Exception("Kings can only move one square in any direction")
         self.position = new_position
         self.is_castle_legal = False    
 
+    def update_reachable_squares(self, board):
+        self.reachable_squares = []
+        piece_col = ord(self.position[0]) - 97 # 0,1,...,7
+        piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        eight_squares = [(piece_row + 1, piece_col), (piece_row - 1, piece_col), (piece_row, piece_col + 1), (piece_row, piece_col - 1),
+                         (piece_row + 1, piece_col + 1), (piece_row + 1, piece_col - 1), (piece_row - 1, piece_col + 1), (piece_row - 1, piece_col - 1)]
+        for square in eight_squares:
+            if 0 <= square[0] <= 7 and 0 <= square[1] <= 7:
+                square_piece = board[square[0]][square[1]]
+                if square_piece is None or square_piece.color != self.color:
+                    self.reachable_squares.append(square)
 
 
 
 # Execution (Playing the game)
 def play_game():
-    game = board()
+    chess_game = game()
     color_dict = {0: 'White', 1: 'Black'}
     while True:
-        print(game)
-        cmd_input = input(f"{color_dict[game.player_turn]}'s move: ")
+        print(chess_game)
+        cmd_input = input(f"{color_dict[chess_game.player_turn]}'s move: ")
         if cmd_input == 'exit':
             break
         try:
-            game.move_piece(cmd_input)
+            chess_game.move_piece(cmd_input)
         except Exception as e:
             print(e)
             continue
@@ -475,9 +552,24 @@ def play_game():
         # white_rook_a1 = game.board[0][0]
         # print('white_rook_a1 reachable squares: ', white_rook_a1.reachable_squares)
         
-        white_bishop_c1 = game.board[0][2]
-        print('white bishop C1 reachable squares: ', white_bishop_c1.reachable_squares)
+        # white_bishop_c1 = game.board[0][2]
+        # print('white bishop C1 reachable squares: ', white_bishop_c1.reachable_squares)
 
+        
+        # white_queen_d1 = game.board[0][3]
+        # print(' white queen d1 reachable squares: ',  white_queen_d1.reachable_squares)
+        
+        # white_knight_b1 = game.board[0][1]
+        # print('white knight b1 reachable squares: ', white_knight_b1.reachable_squares)
+        
+        # piece = chess_game.board[0][0]
+        # future_rook = chess_game.board[2][0]
+        # if piece is not None:
+        #     print("piece: ", piece.reachable_squares)
+        # if future_rook is not None:
+        #     print("future piece: ", future_rook.reachable_squares)
+    
+            
 if __name__ == "__main__":
     play_game()
     
