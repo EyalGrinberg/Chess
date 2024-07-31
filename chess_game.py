@@ -37,8 +37,9 @@ class game:
                             ]
     """ 
     
-    def __repr__(self): # should also revert the board to its original state 
-       return "\n".join([str(row) for row in self.board])
+    def __repr__(self): 
+        # for simplicity the board's upper left corner is (0,0) and the bottom right corner is (7,7), but when printed it should be reverted.
+       return "\n".join([str(row) for row in self.board][::-1])
     
     def sqaure_conversion_to_indices(self, square):
         """
@@ -69,6 +70,57 @@ class game:
                         square.update_reachable_squares(self.board) 
     
     def move_piece(self, cmd_input):
+        # short castle case
+        if cmd_input == 'O-O':
+            print("in castle short case")
+            if self.player_turn == 0: # white player
+                white_king = self.board[0][4]
+                white_rook = self.board[0][7]
+                if white_king.is_castle_legal and white_rook.is_castle_legal:
+                    self.board[0][6] = white_king
+                    self.board[0][5] = white_rook
+                    white_king.position = 'g1'
+                    white_rook.position = 'f1'
+                    self.board[0][4] = None
+                    self.board[0][7] = None
+            else: # black player
+                black_king = self.board[7][4]
+                black_Rook = self.board[7][7]
+                if black_king.is_castle_legal and black_Rook.is_castle_legal:
+                    self.board[7][6] = black_king
+                    self.board[7][5] = black_Rook
+                    black_king.position = 'g8'
+                    black_Rook.position = 'f8'
+                    self.board[7][4] = None
+                    self.board[7][7] = None
+            self.last_piece_moved = None # it doesn't really matter in castle case
+            self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
+        # long castle case
+        elif cmd_input == 'O-O-O':
+            if self.player_turn == 0: # white player
+                white_king = self.board[0][4]
+                white_Rook = self.board[0][0]
+                if white_king.is_castle_legal and white_Rook.is_castle_legal:
+                    self.board[0][2] = white_king
+                    self.board[0][3] = white_Rook
+                    white_king.position = 'c1'
+                    white_Rook.position = 'd1'
+                    self.board[0][4] = None
+                    self.board[0][0] = None
+            else: # black player
+                black_king = self.board[7][4]
+                black_Rook = self.board[7][0]
+                if black_king.is_castle_legal and black_Rook.is_castle_legal:
+                    self.board[7][2] = black_king
+                    self.board[7][3] = black_Rook
+                    black_king.position = 'c8'
+                    black_Rook.position = 'd8'
+                    self.board[7][4] = None
+                    self.board[7][0] = None 
+            self.last_piece_moved = None
+            self.player_turn = 1 - self.player_turn
+            self.update_reachable_squares_for_all_pieces()
         old_position = cmd_input[:2]
         old_position_indices = self.sqaure_conversion_to_indices(old_position)
         piece = self.board[old_position_indices[0]][old_position_indices[1]]
@@ -93,26 +145,7 @@ class game:
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
             self.update_reachable_squares_for_all_pieces()
-            
-            # add logic of updating the reachable squares of all the pieces after moving a piece (nested loop)
-            
-            # debugging
-            # white_rook_a1 = self.board[0][0]
-            # white_rook_a1.update_reachable_squares(self.board)
-            
-            # white_bishop_c1 = self.board[0][2]
-            # white_bishop_c1.update_reachable_squares(self.board)
-            
-            # white_queen_d1 = self.board[0][3]
-            # white_queen_d1.update_reachable_squares(self.board)
-            
-            # white_knight_b1 = self.board[0][1]
-            # white_knight_b1.update_reachable_squares(self.board)
-            
-            # white_pawn_a2 = self.board[1][0]
-            # white_pawn_a2.update_reachable_squares(self.board)
-            
-            
+                        
         # promotion case
         elif len(cmd_input) == 5:
             for i in (0, 2):
@@ -133,78 +166,34 @@ class game:
             promotion_piece = cmd_input[-1]
             if promotion_piece not in ['Q', 'R', 'B', 'N']:
                 raise ValueError("The promotion piece is not valid")
-            piece.move(new_position, promotion_piece, self.board)
-            self.board[new_position_indices[0]][new_position_indices[1]] = piece
+            piece.move(new_position, promotion_piece, self)
+            if promotion_piece == 'Q':
+                self.board[new_position_indices[0]][new_position_indices[1]] = queen(piece.color, new_position)
+            elif promotion_piece == 'R':
+                self.board[new_position_indices[0]][new_position_indices[1]] = rook(piece.color, new_position)
+            elif promotion_piece == 'B':
+                self.board[new_position_indices[0]][new_position_indices[1]] = bishop(piece.color, new_position)
+            else: # promotion_piece == 'N'
+                self.board[new_position_indices[0]][new_position_indices[1]] = knight(piece.color, new_position)
             self.board[old_position_indices[0]][old_position_indices[1]] = None
             self.last_piece_moved = piece
             self.player_turn = 1 - self.player_turn
             self.update_reachable_squares_for_all_pieces()
-        # short castle case
-        elif cmd_input == 'O-O':
-            if self.player_turn == 0: # white player
-                king = self.board[0][4]
-                rook = self.board[0][7]
-                if king.is_castle_legal and rook.is_castle_legal:
-                    self.board[0][6] = king
-                    self.board[0][5] = rook
-                    king.position = 'g1'
-                    rook.position = 'f1'
-                    self.board[0][4] = None
-                    self.board[0][7] = None
-            else: # black player
-                king = self.board[7][4]
-                rook = self.board[7][7]
-                if king.is_castle_legal and rook.is_castle_legal:
-                    self.board[7][6] = king
-                    self.board[7][5] = rook
-                    king.position = 'g8'
-                    rook.position = 'f8'
-                    self.board[7][4] = None
-                    self.board[7][7] = None
-            self.last_piece_moved = None # it doesn't really matter in castle case
-            self.player_turn = 1 - self.player_turn
-            self.update_reachable_squares_for_all_pieces()
-        # long castle case
-        elif cmd_input == 'O-O-O':
-            if self.player_turn == 0: # white player
-                king = self.board[0][4]
-                rook = self.board[0][0]
-                if king.is_castle_legal and rook.is_casle_legal:
-                    self.board[0][2] = king
-                    self.board[0][3] = rook
-                    king.position = 'c1'
-                    rook.position = 'd1'
-                    self.board[0][4] = None
-                    self.board[0][0] = None
-            else: # black player
-                king = self.board[7][4]
-                rook = self.board[7][0]
-                if king.is_castle_legal and rook.is_casle_legal:
-                    self.board[7][2] = king
-                    self.board[7][3] = rook
-                    king.position = 'c8'
-                    rook.position = 'd8'
-                    self.board[7][4] = None
-                    self.board[7][0] = None 
-            self.last_piece_moved = None
-            self.player_turn = 1 - self.player_turn
-            self.update_reachable_squares_for_all_pieces()
+
         else: # if the input length is not 4, and neither a promotion nor a 
             # castle move ('e7e8', 'O-O', 'O-O-O') - it means it's an invalid move.     
             raise Exception("Invalid move")     
         
         
             
-            
-# 1. work on pawn captures. V
+# 2. work on the error messages, some cases are not really possible to get.
 # 2. work on pins and checks. - use the king threat attribute for identifying it
 # 3. work on the checkmate and stalemate conditions.   
-# 4. work on the en passant move. V
-# 5. add letters and numbers to the board visualization.
+# 5. add letters and numbers to the board visualization ?
 # 6. work on castle rights when the cstling squares are threatened. - use the king threat attribute for identifying it
 
     
-class pawn: # add inheritance from game and use its conversion method
+class pawn: 
     def __init__(self, color, position):
         self.color = color
         self.position = position
@@ -222,7 +211,7 @@ class pawn: # add inheritance from game and use its conversion method
         if abs(ord(new_position[0]) - ord(self.position[0])) == 1:
             if int(new_position[1]) - int(self.position[1]) == 1 and game.player_turn == 0 or \
                 int(new_position[1]) - int(self.position[1]) == -1 and game.player_turn == 1:
-                    self.capture(new_position, game)
+                    self.capture(new_position, game, promotion_piece)
             else:
                 raise Exception("Pawns cannot move that way")
         # regular move
@@ -247,7 +236,10 @@ class pawn: # add inheritance from game and use its conversion method
             raise Exception("Pawns can only be promoted when they reach the end of the board")
         self.__class__ = new_piece(self.color)
         
-    def capture(self, new_position, game):
+    def capture(self, new_position, game, promotion_piece=None):
+        # check if the pawn can be promoted
+        if self.position[1] == 7 or self.position[1] == 0:
+            self.promote(promotion_piece)        
         # check if it's an en passant move
         if game.player_turn == 0: # white takes black's pawn en passant
             piece_to_capture = game.board[4][ord(new_position[0]) - 97]
@@ -265,7 +257,8 @@ class pawn: # add inheritance from game and use its conversion method
                         self.en_passant(new_position, game)
         # if it is not an en passant capture it's a regular capture
         if self.is_en_passant == False:
-            target_square_indices = game.sqaure_conversion_to_indices(new_position)
+            target_square_indices = game.sqaure_conversion_to_indices(new_position) 
+            # I chose to pass an instance of game and use it's 'sqaure_conversion_to_indices' method, instead of using inheritance because a pawn 'is-not-a' game.
             target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
             if target_sqaure_piece is None:
                 raise Exception("there is no piece to capture at this square") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
@@ -298,15 +291,6 @@ class pawn: # add inheritance from game and use its conversion method
                     self.threating_squares.append((piece_row - 1, piece_col - 1))
                 if piece_col < 7:
                     self.threating_squares.append((piece_row - 1, piece_col + 1))
-        
-   
-   # I think I implemented it well, but I still need to make sure.                 
-# 1. to identify in the Pawn.move() that it's a capture move. (already done)
-# 2. add to capture method a check of en passant move, if so, call the en_passant method. 
-# the problem is that if I use a flag of the pawn class then if the opponent don't capture en passant in the next move, the flag will remain True while it should be False.
-# so I should use a flag in the board class that will be reset after each move.
-# 3. in en_passant method update the board after the en passant move.
-        
 
 class rook:
     def __init__(self, color, position):
@@ -337,7 +321,7 @@ class rook:
                 if square is not None:
                     if square.color == self.color:
                         break
-                    else: # add the last square that can be reached if the rook captures a piece of the opposite color
+                    else: # add the last square that can be reached if the Rook captures a piece of the opposite color
                         self.reachable_squares.append((piece_row, col))
                         break
                 else: # add the square if it's empty
@@ -549,8 +533,8 @@ def play_game():
             continue
         
         # debugging
-        # white_rook_a1 = game.board[0][0]
-        # print('white_rook_a1 reachable squares: ', white_rook_a1.reachable_squares)
+        # white_Rook_a1 = game.board[0][0]
+        # print('white_Rook_a1 reachable squares: ', white_Rook_a1.reachable_squares)
         
         # white_bishop_c1 = game.board[0][2]
         # print('white bishop C1 reachable squares: ', white_bishop_c1.reachable_squares)
@@ -563,11 +547,11 @@ def play_game():
         # print('white knight b1 reachable squares: ', white_knight_b1.reachable_squares)
         
         # piece = chess_game.board[0][0]
-        # future_rook = chess_game.board[2][0]
+        # future_Rook = chess_game.board[2][0]
         # if piece is not None:
         #     print("piece: ", piece.reachable_squares)
-        # if future_rook is not None:
-        #     print("future piece: ", future_rook.reachable_squares)
+        # if future_Rook is not None:
+        #     print("future piece: ", future_Rook.reachable_squares)
     
             
 if __name__ == "__main__":
