@@ -3,7 +3,12 @@ import copy # used for copying instances of class game and simulating moves.
 class game:
     
     def __init__(self, player_turn=0, move_cnt=0):
-        """Initializes the board and other attributes for an initial position of a chess game"""
+        """
+        Initializes the board and other attributes for an initial position of a chess game.
+        Args:
+            player_turn (int): 0 for white, 1 for black. Default is 0.
+            move_cnt (int): the number of moves that have been played so far. Default is 0.
+        """
         self.player_turn = player_turn # 0 for white, 1 for black
         self.move_cnt = move_cnt
         self.pieces_lst = [] # relevant only for insufficient material draw. 
@@ -151,7 +156,7 @@ class game:
         try:
             sim_game = sim_game.move_piece(cmd)
             return 1
-        except:
+        except Exception as e:
             # it doesn't really matter which exceptions are raised but it should be one of these two, it's mainly for readability
             Exception("Your king is being checked, you cannot play this move.") 
             Exception("The chosen piece is pinned.")
@@ -289,7 +294,7 @@ class game:
         if piece.__class__ == pawn:
             pawn_forward_reachable = self.get_pawn_forward_reachable_squares(piece)
             if new_position_indices not in pawn_forward_reachable and piece.position[0] == new_position[0]:
-                raise Exception("That pawn is blocked by another piece.")
+                raise Exception("That pawn is blocked by another piece.") # raised when I play e2e5 - need to fix it !!!!!!!!!!
         elif new_position_indices not in piece.reachable_squares and piece.__class__ != king:
             raise Exception("There is another piece in the way.")      
         # simulate the move and check its validity, if the move is legal - return the new game after the move was played.
@@ -301,7 +306,7 @@ class game:
             promotion_piece = cmd_input[-1]
             if promotion_piece not in ['Q', 'R', 'B', 'N']:
                 raise Exception("The promotion piece is not valid.")
-            piece.move(new_position, promotion_piece, new_game)
+            piece.move(new_position, new_game)
             # create an instance of the promotion piece in the target square
             if promotion_piece == 'Q':
                 new_game.board[new_position_indices[0]][new_position_indices[1]] = queen(piece.color, new_position)
@@ -312,7 +317,7 @@ class game:
             else: # 'N'
                 new_game.board[new_position_indices[0]][new_position_indices[1]] = knight(piece.color, new_position)
         else: # regular move
-            piece.move(new_position, game=new_game)
+            piece.move(new_position, new_game)
             new_game.board[new_position_indices[0]][new_position_indices[1]] = piece
         # these lines should be executed for both promotion and regular move
         new_game.board[old_position_indices[0]][old_position_indices[1]] = None     
@@ -346,10 +351,12 @@ class game:
         if new_game.player_turn == 0 and white_king_new.is_checked:
             # black played a move and checked the white king, need to see if its a mate 
             if self.test_mate(new_game, white_king_new, new_game.kings_positions[0]):
+                print(new_game)
                 print("Black wins!")
                 exit()
         if new_game.player_turn == 1 and black_king_new.is_checked:
             if self.test_mate(new_game, black_king_new, new_game.kings_positions[1]):      
+                print(new_game)
                 print("White wins!")
                 exit()  
         # it's a legal move that doesn't end with a mate - return the updated game
@@ -428,11 +435,15 @@ class game:
                 raise Exception("Invalid move") 
         # for castle cases return the updated game after the castle was played.
         return self           
-# need to continue work from here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    
+
     def check_insufficient_material_draw(self):
-        # if it's not a check/mate situation - need to check if it's a draw
-        # insufficient material draw - relevant only when there are 3 pieces or less on the board 
-        # (move_cnt should be at least 29 since there are 32 pieces in chess)      
+        """
+        Checks if the game is in an insufficient material draw position.
+        Returns:
+            1 if the game is in an insufficient material draw position, 0 otherwise.
+        """
+        # insufficient material draw - relevant only when there are 3 pieces or less on the board. 
+        # (move_cnt should be at least 29 since there are 32 pieces in chess).
         if self.move_cnt > 29:
             self.pieces_lst = []
             # need to check which pieces are left on the board, insufficient material draw cases are:
@@ -441,11 +452,11 @@ class game:
                 for square in row:
                     if square is not None:
                         self.pieces_lst.append(square)
-                    if len(self.pieces_lst) > 3:
+                    if len(self.pieces_lst) > 3: # there is a sufficient material for deciding the game.
                         break
-            if len(self.pieces_lst) == 2:
+            if len(self.pieces_lst) == 2: # king vs king
                 return 1
-            elif len(self.pieces_lst) == 3:
+            elif len(self.pieces_lst) == 3: # king & knight vs king or king & bishop vs king
                 for piece in self.pieces_lst:
                     if piece.__class__ == king:
                         continue
@@ -454,8 +465,14 @@ class game:
         # if the function reaches this line, there is a sufficient material for deciding the game.  
         return 0
     
-    
     def check_stalemate_draw(self, stalemated_king):
+        """ 
+        Checks if the game is in a stalemate position.
+        Args:
+            stalemated_king (king): the king that is potentially stalemated.
+        Returns:
+            1 if the game is in a stalemate position, 0 otherwise.
+        """
         if stalemated_king.is_checked:
             return 0
         # at this point we know the king is not checked.
@@ -499,6 +516,7 @@ class game:
                                 return 0
                             else:
                                 continue 
+        # at this point we know the king is not checked, it can't move and there are no pieces that can move - it's a stalemate.
         return 1
             
 # 6. add letters and numbers to the board visualization ?
@@ -508,89 +526,95 @@ class game:
     
 class pawn: 
     def __init__(self, color, position):
+        """ 
+        Initializes a pawn object.
+        Args:
+            color (str): the color of the pawn, either 'white' or 'black'.
+            position (str): the position of the pawn on the board, a string of length 2.    
+        """
         self.color = color
         self.position = position
         self.two_squares = False # turns on only once in the game when a pawn is moving 2 squares forward and turns off the move after it.
         self.is_en_passant_capture = False # this flag indicates if a capture of the form "f5e6" is a regular capture or an en passant capture.
-        self.reachable_squares = [] # squares that the pawn can capture or threat
+        self.reachable_squares = [] # squares that the pawn can capture or threat (not including the forward squares).
 
     def __repr__(self) -> str:
         return '  P '
 
-    def move(self, new_position, promotion_piece=None, game=None):
+    def move(self, new_position, game):
+        """
+        Moves the pawn to a new position on the board.
+        Args:
+            new_position (str): the new position of the pawn on the board, a string of length 2.
+            game (game, optional): an instance of a game class. This function uses methods and attributes of the game class, instead of inheritance because a pawn 'is-not-a' game.
+        """
         new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
         target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
         if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
-            raise Exception("The pawn is blocked")
+            raise Exception("The pawn is blocked.")
         self.is_en_passant_capture = False # turn the en passant flag off
         self.two_squares = False
         # check if it's a capture move
         if abs(ord(new_position[0]) - ord(self.position[0])) == 1:
             if int(new_position[1]) - int(self.position[1]) == 1 and game.player_turn == 0 or \
                 int(new_position[1]) - int(self.position[1]) == -1 and game.player_turn == 1:
-                    self.capture(new_position, game, promotion_piece)
+                    self.capture(new_position, game)
             else:
-                raise Exception("Pawns cannot move that way")
+                raise Exception("Pawns cannot move that way.")
         # regular move
         if new_position[0] != self.position[0] or self.color == 'white' and int(self.position[1]) > int(new_position[1]) or self.color == 'black' and int(self.position[1]) < int(new_position[1]):
-            raise Exception("Pawns can only move forward")
-        if int(new_position[1]) - int(self.position[1]) > 2:
-            raise Exception("Pawns can't move more than 2 squares")
-        if int(new_position[1]) - int(self.position[1]) == 2 and self.position[1] != '2':
-            raise Exception("Pawns can move 2 squares only from their opening position")
+            raise Exception("Pawns can only move forward.")
+        if abs(int(new_position[1]) - int(self.position[1])) > 2:
+            raise Exception("Pawns can't move more than 2 squares.")
+        if abs(int(new_position[1]) - int(self.position[1])) == 2:
+            if self.position[1] != '2' and self.color == 'white' or self.position[1] != '7' and self.color == 'black':
+                raise Exception("Pawns can move 2 squares only from their opening position")
         # check if it's a 2 squares move
         if self.color == 'white' and self.position[1] == '2' and new_position[1] == '4':
             self.two_squares = True 
         if self.color == 'black' and self.position[1] == '7' and new_position[1] == '5':
             self.two_squares = True
+        # update the pawn's position if the move is legal
         self.position = new_position 
-        # check if the pawn can be promoted
-        if self.position[1] == 7 or self.position[1] == 0:
-            self.promote(promotion_piece)
-
-    def promote(self, new_piece):
-        if self.position[1] != 7 and self.position[1] != 0:
-            raise Exception("Pawns can only be promoted when they reach the end of the board")
-        self.__class__ = new_piece(self.color)
         
-    def capture(self, new_position, game, promotion_piece=None):
-        # check if the pawn can be promoted
-        if self.position[1] == 7 or self.position[1] == 0:
-            self.promote(promotion_piece)        
+    def capture(self, new_position, game):     
+        """
+        Captures a piece on the board by a pawn.
+        Args:
+            new_position (str): the position of the piece to capture on the board, a string of length 2.
+            game (game): an instance of a game class.        
+        """ 
         # check if it's an en passant move
-        if game.player_turn == 0: # white takes black's pawn en passant
-            piece_to_capture = game.board[4][ord(new_position[0]) - 97]
-            if piece_to_capture is not None:
-                if int(self.position[1]) == 5 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True \
-                    and game.last_piece_moved == piece_to_capture and new_position[0] == piece_to_capture.position[0] and new_position[1] == '6':
-                        self.is_en_passant_capture = True
-                        self.en_passant(new_position, game)
-        else: # black takes white's pawn en passant
-            piece_to_capture = game.board[3][ord(new_position[0]) - 97]
-            if piece_to_capture is not None:
-                if int(self.position[1]) == 4 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True \
-                    and game.last_piece_moved == piece_to_capture and new_position[0] == piece_to_capture.position[0] and new_position[1] == '3':
-                        self.is_en_passant_capture = True
-                        self.en_passant(new_position, game)
+        new_pos_col = ord(new_position[0]) - 97
+        for tup in ((0, 4, '6'), (1, 3, '3')):
+            if game.player_turn == tup[0]: # white takes black's pawn en passant
+                piece_to_capture = game.board[tup[1]][new_pos_col]
+                if piece_to_capture is not None:
+                    if int(self.position[1]) == tup[1] + 1 and piece_to_capture.__class__ == pawn and piece_to_capture.two_squares == True \
+                        and game.last_piece_moved == piece_to_capture and new_position[0] == piece_to_capture.position[0] and new_position[1] == tup[2]:
+                            self.is_en_passant_capture = True
+                            self.en_passant(new_position, game)                        
         # if it is not an en passant capture it's a regular capture
         if self.is_en_passant_capture == False:
             target_square_indices = game.sqaure_conversion_to_indices(new_position) 
-            # I chose to pass an instance of game and use it's 'sqaure_conversion_to_indices' method, instead of using inheritance because a pawn 'is-not-a' game.
             target_sqaure_piece = game.board[target_square_indices[0]][target_square_indices[1]]
             if target_sqaure_piece is None:
-                raise Exception("there is no piece to capture at this square") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
-            elif target_sqaure_piece.color == 'white' and game.player_turn == 0 or target_sqaure_piece.color == 'black' and game.player_turn == 1:
-                raise Exception("A pawn cannot capture pieces of it's own color") # maybe drop this part because the 'move_piece' method already checks this case (for a general piece)
-            else:
-                self.position = new_position          
+                raise Exception("There is no piece to capture at this square.")
+        # update the position of the pawn after the capture
+        self.position = new_position          
 
     def en_passant(self, new_position, game):
-        # update the board after the en passant move, the 'move_piece' method updates everything except the opponent's pawn being taken
+        """ 
+        Update the board after the en passant move, the 'move_piece' method updates everything except the opponent's pawn being taken.
+        Args:
+            new_position (str): the position of the piece to capture on the board, a string of length 2.
+            game (game): an instance of a game class.
+        """
+        new_pos_col = ord(new_position[0]) - 97
         if game.player_turn == 0:
-            game.board[4][ord(new_position[0]) - 97] = None
+            game.board[4][new_pos_col] = None
         else:
-            game.board[3][ord(new_position[0]) - 97] = None
-        self.position = new_position        
+            game.board[3][new_pos_col] = None
         
     def update_reachable_squares(self, board):
         self.reachable_squares = []
@@ -829,7 +853,7 @@ class king:
         self.is_castle_legal = False    
         
     
-    def squares_threat_test(self, board, squares, king_square):
+    def squares_threat_test(self, board, squares, king_square):       
         """
         Checks if the squares in the input list are threatened by the opponent pieces on the board.
         squares is a list of tuples.
@@ -842,8 +866,9 @@ class king:
             for row in board:
                 for square in row:
                     if square is not None and square.color != self.color: # check if the opponent piece located in square is threatening the tested square 
-                        if tested_square in square.reachable_squares:
-                            unthreatened_inboard_squares.remove(tested_square)
+                        if tested_square in square.reachable_squares: 
+                            if tested_square in unthreatened_inboard_squares:
+                                unthreatened_inboard_squares.remove(tested_square)
                         if king_square in square.reachable_squares:
                             self.is_checked = True
                             king_threatening_piece = square
@@ -889,18 +914,22 @@ def play_game():
                     continue
         try:
             chess_game = chess_game.move_piece(cmd_input)
+            # after a move was played legally - need to check if it's a draw by insufficient material.
             if chess_game.check_insufficient_material_draw():
                 print(chess_game)
                 print("It's a draw by insufficient material!")
                 exit()  
-            if chess_game.player_turn == 0: # black played a move, need to check if the white kung is stalemated.
+            # need to check if it's a stalemate draw.
+            if chess_game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
                 stalemated_king = chess_game.board[chess_game.kings_positions[0][0]][chess_game.kings_positions[0][1]]
             else: # the opposite case
                 stalemated_king = chess_game.board[chess_game.kings_positions[1][0]][chess_game.kings_positions[1][1]]
-            if chess_game.check_stalemate_draw(stalemated_king):
-                print(chess_game)
-                print("It's a draw by a stalemate!")
-                exit()  
+            # only relevant if the king is not checked after a move was played.
+            if not stalemated_king.is_checked:
+                if chess_game.check_stalemate_draw(stalemated_king):
+                    print(chess_game)
+                    print("It's a draw by a stalemate!")
+                    exit()    
         except Exception as e:
             print(e)
             continue
@@ -928,20 +957,22 @@ def testing_given_game(game, pieces):
             break
         try:
             game = game.move_piece(cmd_input)
+            # after a move was played legally - need to check if it's a draw by insufficient material.
             if game.check_insufficient_material_draw():
                 print(game)
                 print("It's a draw by insufficient material!")
                 exit()  
-            if game.player_turn == 0: # black played a move, need to check if the white kung is stalemated.
+            # need to check if it's a stalemate draw.
+            if game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
                 stalemated_king = game.board[game.kings_positions[0][0]][game.kings_positions[0][1]]
             else: # the opposite case
                 stalemated_king = game.board[game.kings_positions[1][0]][game.kings_positions[1][1]]
-            if game.check_stalemate_draw(stalemated_king):
-                print(game)
-                print("It's a draw by a stalemate!")
-                exit()  
-
-                
+            # only relevant if the king is not checked after a move was played.
+            if not stalemated_king.is_checked:
+                if game.check_stalemate_draw(stalemated_king):
+                    print(game)
+                    print("It's a draw by a stalemate!")
+                    exit()      
         except Exception as e:
             print(e)
             continue
