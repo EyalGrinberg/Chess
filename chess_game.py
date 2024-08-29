@@ -543,7 +543,7 @@ class pawn:
 
     def move(self, new_position, game):
         """
-        Moves the pawn to a new position on the board.
+        Checks if the move is legal and updates the pawn's position if it is.
         Args:
             new_position (str): the new position of the pawn on the board, a string of length 2.
             game (game, optional): an instance of a game class. This function uses methods and attributes of the game class, instead of inheritance because a pawn 'is-not-a' game.
@@ -617,15 +617,23 @@ class pawn:
             game.board[3][new_pos_col] = None
         
     def update_reachable_squares(self, board):
+        """ 
+        Updates the reachable squares of the pawn. 
+        By reachable squares I mean the squares that the pawn can capture or threat (not including the forward squares).
+        Args:
+            board (list): a 2D list representing the board.
+        """
         self.reachable_squares = []
         piece_col = ord(self.position[0]) - 97 # 0,1,...,7
         piece_row = int(self.position[1]) - 1 # 0,1,...,7
         if self.color == 'white':
             if piece_row < 7:
                 if piece_col > 0:
+                    # check if there is a piece to capture to the left
                     if board[piece_row + 1][piece_col - 1] is not None and board[piece_row + 1][piece_col - 1].color == 'black':
                         self.reachable_squares.append((piece_row + 1, piece_col - 1))
                 if piece_col < 7:
+                    # check if there is a piece to capture to the right
                     if board[piece_row + 1][piece_col + 1] is not None and board[piece_row + 1][piece_col + 1].color == 'black':
                         self.reachable_squares.append((piece_row + 1, piece_col + 1))
         else:
@@ -639,6 +647,13 @@ class pawn:
 
 class rook:
     def __init__(self, color, position, is_castle_legal=True):
+        """ 
+        Initializes a rook object.
+        Args:
+            color (str): the color of the rook, either 'white' or 'black'.
+            position (str): the position of the rook on the board, a string of length 2.
+            is_castle_legal (bool): a flag to indicate if the rook can castle or not (it's legal only if the rook hasn't moved yet).
+        """
         self.color = color
         self.position = position
         self.is_castle_legal = is_castle_legal 
@@ -648,66 +663,77 @@ class rook:
         return '  R '
 
     def move(self, new_position, game=None):
+        """ 
+        Checks if the move is legal and updates the rook's position if it is.
+        Args:
+            new_position (str): the new position of the rook on the board, a string of length 2.
+            game (game, optional): not really used in this method, but it's here to keep the same method signature as the other pieces.
+        """
         if new_position[0] != self.position[0] and new_position[1] != self.position[1]:
             raise Exception("Rooks can only move in straight lines")
         self.position = new_position 
-        self.is_castle_legal = False
+        self.is_castle_legal = False # the rook can't castle anymore after it moved
+
+    def reachable_squares_per_direction(self, board, squares_range, row, col, iterate_cols):
+        """ 
+        Iterates over the squares in a certain direction and updates the reachable squares of the rook.
+        Args:
+            board (list): a 2D list representing the board.
+            squares_range (range): a range object representing the squares to iterate over.
+            row (int): the row index of the rook on the board.
+            col (int): the column index of the rook on the board.
+            iterate_cols (bool): a flag to indicate if the iteration is over the columns or the rows.
+        """
+        for i in squares_range:
+            if iterate_cols:
+                square = board[row][i]
+            else:
+                square = board[i][col]
+            # check if there's a piece of the same color in the way
+            if square is not None:
+                if square.color == self.color:
+                    break
+                else: # add the last square that can be reached if the Rook captures a piece of the opposite color
+                    if iterate_cols:
+                        self.reachable_squares.append((row, i))
+                    else:
+                        self.reachable_squares.append((i, col))
+                    break
+            else: # add the square if it's empty
+                if iterate_cols:
+                    self.reachable_squares.append((row, i))
+                else:
+                    self.reachable_squares.append((i, col))
     
     def update_reachable_squares(self, board):
-        # maybe modularize the code by creating a helper function that checks the squares in a certain direction (the for loop part)
+        """ 
+        Updates the reachable squares of the rook.
+        Args:
+            board (list): a 2D list representing the board.
+        Returns:
+            The reachable squares of the rook (used for the queen reachable squares calculation).
+        """
         self.reachable_squares = []
         piece_col = ord(self.position[0]) - 97 # 0,1,...,7
         piece_row = int(self.position[1]) - 1 # 0,1,...,7
         # check the squares to the right
         if piece_col < 7:
-            for col in range(piece_col + 1, 8):
-                square = board[piece_row][col]
-                # check if there's a piece of the same color in the way
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: # add the last square that can be reached if the Rook captures a piece of the opposite color
-                        self.reachable_squares.append((piece_row, col))
-                        break
-                else: # add the square if it's empty
-                    self.reachable_squares.append((piece_row, col))
+            self.reachable_squares_per_direction(board, range(piece_col + 1, 8), piece_row, piece_col, True)
         # check the squares to the left
         if piece_col > 0:
-            for col in range(piece_col - 1, -1, -1):
-                square = board[piece_row][col]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((piece_row, col))
-                        break
-                else: 
-                    self.reachable_squares.append((piece_row, col))
+            self.reachable_squares_per_direction(board, range(piece_col - 1, -1, -1), piece_row, piece_col, True)
         # check the squares below
         if piece_row < 7:
-            for row in range(piece_row + 1, 8):
-                square = board[row][piece_col]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((row, piece_col))
-                        break
-                else: 
-                    self.reachable_squares.append((row, piece_col))
+            self.reachable_squares_per_direction(board, range(piece_row + 1, 8), piece_row, piece_col, False)
         # check the squares above
         if piece_row > 0:
-            for row in range(piece_row - 1, -1, -1):
-                square = board[row][piece_col]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((row, piece_col))
-                        break
-                else: 
-                    self.reachable_squares.append((row, piece_col))
-        return self.reachable_squares                  
+            self.reachable_squares_per_direction(board, range(piece_row - 1, -1, -1), piece_row, piece_col, False)         
+        # usually there's no need to return the reachable_squares, except for the rook and bishop since the queen inherits from them.   
+        return self.reachable_squares                               
+        
+        
+        # continue from here !!!!!!!!!!!!!!!!!!!!!
+        
         
 class knight:
     def __init__(self, color, position):
@@ -915,21 +941,21 @@ def play_game():
         try:
             chess_game = chess_game.move_piece(cmd_input)
             # after a move was played legally - need to check if it's a draw by insufficient material.
-            if chess_game.check_insufficient_material_draw():
-                print(chess_game)
-                print("It's a draw by insufficient material!")
-                exit()  
-            # need to check if it's a stalemate draw.
-            if chess_game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
-                stalemated_king = chess_game.board[chess_game.kings_positions[0][0]][chess_game.kings_positions[0][1]]
-            else: # the opposite case
-                stalemated_king = chess_game.board[chess_game.kings_positions[1][0]][chess_game.kings_positions[1][1]]
-            # only relevant if the king is not checked after a move was played.
-            if not stalemated_king.is_checked:
-                if chess_game.check_stalemate_draw(stalemated_king):
-                    print(chess_game)
-                    print("It's a draw by a stalemate!")
-                    exit()    
+            # if chess_game.check_insufficient_material_draw():
+            #     print(chess_game)
+            #     print("It's a draw by insufficient material!")
+            #     exit()  
+            # # need to check if it's a stalemate draw.
+            # if chess_game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
+            #     stalemated_king = chess_game.board[chess_game.kings_positions[0][0]][chess_game.kings_positions[0][1]]
+            # else: # the opposite case
+            #     stalemated_king = chess_game.board[chess_game.kings_positions[1][0]][chess_game.kings_positions[1][1]]
+            # # only relevant if the king is not checked after a move was played.
+            # if not stalemated_king.is_checked:
+            #     if chess_game.check_stalemate_draw(stalemated_king):
+            #         print(chess_game)
+            #         print("It's a draw by a stalemate!")
+            #         exit()    
         except Exception as e:
             print(e)
             continue
