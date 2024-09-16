@@ -729,14 +729,16 @@ class rook:
         if piece_row > 0:
             self.reachable_squares_per_direction(board, range(piece_row - 1, -1, -1), piece_row, piece_col, False)         
         # usually there's no need to return the reachable_squares, except for the rook and bishop since the queen inherits from them.   
-        return self.reachable_squares                               
-        
-        
-        # continue from here !!!!!!!!!!!!!!!!!!!!!
-        
+        return self.reachable_squares                                       
         
 class knight:
     def __init__(self, color, position):
+        """ 
+        Initializes a knight object.
+        Args:
+            color (str): the color of the knight, either 'white' or 'black'.
+            position (str): the position of the knight on the board, a string of length 2.
+        """
         self.color = color
         self.position = position
         self.reachable_squares = []
@@ -745,6 +747,12 @@ class knight:
         return '  N '
 
     def move(self, new_position, game=None):
+        """ 
+        Checks if the move is legal and updates the knight's position if it is.
+        Args:
+            new_position (str): the new position of the knight on the board, a string of length 2.
+            game (game, optional): not really used in this method, but it's here to keep the same method signature as the other pieces.
+        """
         if abs(ord(new_position[0]) - ord(self.position[0])) == 2 and abs(ord(new_position[1]) - ord(self.position[1])) == 1:
             self.position = new_position
         elif abs(ord(new_position[0]) - ord(self.position[0])) == 1 and abs(ord(new_position[1]) - ord(self.position[1])) == 2:
@@ -753,6 +761,11 @@ class knight:
             raise Exception("Knights move in an L shape")
         
     def update_reachable_squares(self, board):
+        """ 
+        Updates the reachable squares of the knight.
+        Args:
+            board (list): a 2D list representing the board.
+        """
         self.reachable_squares = []
         piece_col = ord(self.position[0]) - 97 # 0,1,...,7
         piece_row = int(self.position[1]) - 1 # 0,1,...,7
@@ -764,9 +777,14 @@ class knight:
                 if square_piece is None or square_piece.color != self.color:
                     self.reachable_squares.append(square)
         
-
 class bishop:
     def __init__(self, color, position):
+        """ 
+        Initializes a bishop object.
+        Args:
+            color (str): the color of the bishop, either 'white' or 'black'.
+            position (str): the position of the bishop on the board, a string of length 2.
+        """
         self.color = color
         self.position = position
         self.reachable_squares = []
@@ -775,63 +793,84 @@ class bishop:
         return '  B '
 
     def move(self, new_position, game=None):
+        """ 
+        Checks if the move is legal and updates the bishop's position if it is.
+        Args:
+            new_position (str): the new position of the bishop on the board, a string of length 2.
+            game (game, optional): not really used in this method, but it's here to keep the same method signature as the other pieces.
+        """
         if abs(ord(new_position[0]) - ord(self.position[0])) != abs(int(new_position[1]) - int(self.position[1])):
             raise Exception("Bishops move diagonally")
         self.position = new_position
-        
+    
+    def reachable_squares_per_direction_b(self, board, squares_range, row, col, iterate_up, iterate_right):
+        """ 
+        Iterates over the squares in a certain direction and updates the reachable squares of the bishop.
+        Args:
+            board (list): a 2D list representing the board.
+            squares_range (range): a range object representing the squares to iterate over.
+            row (int): the row index of the bishop on the board.
+            col (int): the column index of the bishop on the board.
+            iterate_up (bool): a flag to indicate if the iteration is up or down.
+            iterate_right (bool): a flag to indicate if the iteration is right or left.
+        """
+        for i in squares_range:
+            if iterate_up and iterate_right: # up and right
+                square = board[row + i][col + i]
+            elif iterate_up and not iterate_right: # up and left
+                square = board[row + i][col - i]
+            elif not iterate_up and iterate_right: # down and right
+                square = board[row - i][col + i]
+            else: # down and left
+                square = board[row - i][col - i]
+            # check if there's a piece of the same color in the way
+            if square is not None:
+                if square.color == self.color:
+                    break
+                else: # add the capturing square 
+                    if iterate_up and iterate_right:
+                        self.reachable_squares.append((row + i, col + i))
+                    elif iterate_up and not iterate_right:
+                        self.reachable_squares.append((row + i, col - i))
+                    elif not iterate_up and iterate_right:
+                        self.reachable_squares.append((row - i, col + i))
+                    else:
+                        self.reachable_squares.append((row - i, col - i))
+                    break
+            else: # add the empty square
+                if iterate_up and iterate_right:
+                    self.reachable_squares.append((row + i, col + i))
+                elif iterate_up and not iterate_right:
+                    self.reachable_squares.append((row + i, col - i))
+                elif not iterate_up and iterate_right:
+                    self.reachable_squares.append((row - i, col + i))
+                else:
+                    self.reachable_squares.append((row - i, col - i))
+    
     def update_reachable_squares(self, board):
+        """ 
+        Updates the reachable squares of the bishop.
+        Args:
+            board (list): a 2D list representing the board.
+        Returns:
+            The reachable squares of the bishop (used for the queen reachable squares calculation).
+        """
         self.reachable_squares = []
         piece_col = ord(self.position[0]) - 97 # 0,1,...,7
         piece_row = int(self.position[1]) - 1 # 0,1,...,7
-        # check the squares to the right and down
         if piece_col < 7 and piece_row < 7:
-            for i in range(1, min(8 - piece_row, 8 - piece_col)):
-                square = board[piece_row + i][piece_col + i]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((piece_row + i, piece_col + i))
-                        break
-                else: 
-                    self.reachable_squares.append((piece_row + i, piece_col + i))
-        # check the squares to the left and down
+            # check the squares to the right and up
+            self.reachable_squares_per_direction_b(board, range(1, min(8 - piece_row, 8 - piece_col)), piece_row, piece_col, True, True)
         if piece_col > 0 and piece_row < 7:
-            for i in range(1, min(8 - piece_row, piece_col + 1)):
-                square = board[piece_row + i][piece_col - i]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((piece_row + i, piece_col - i))
-                        break
-                else: 
-                    self.reachable_squares.append((piece_row + i, piece_col - i))
-        # check the squares to the right and up
+            # check the squares to the left and up
+            self.reachable_squares_per_direction_b(board, range(1, min(8 - piece_row, piece_col + 1)), piece_row, piece_col, True, False)
         if piece_col < 7 and piece_row > 0:
-            for i in range(1, min(piece_row + 1, 8 - piece_col)):
-                square = board[piece_row - i][piece_col + i]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((piece_row - i, piece_col + i))
-                        break
-                else: 
-                    self.reachable_squares.append((piece_row - i, piece_col + i))
-        # check the squares to the left and up
+            # check the squares to the right and down
+            self.reachable_squares_per_direction_b(board, range(1, min(piece_row + 1, 8 - piece_col)), piece_row, piece_col, False, True)
         if piece_col > 0 and piece_row > 0:
-            for i in range(1, min(piece_row + 1, piece_col + 1)):
-                square = board[piece_row - i][piece_col - i]
-                if square is not None:
-                    if square.color == self.color:
-                        break
-                    else: 
-                        self.reachable_squares.append((piece_row - i, piece_col - i))
-                        break
-                else: 
-                    self.reachable_squares.append((piece_row - i, piece_col - i))
-        return self.reachable_squares           
+            # check the squares to the left and down
+            self.reachable_squares_per_direction_b(board, range(1, min(piece_row + 1, piece_col + 1)), piece_row, piece_col, False, False)
+        return self.reachable_squares                   
         
 class queen(bishop, rook):
     def __init__(self, color, position):
@@ -854,8 +893,7 @@ class queen(bishop, rook):
         # piece_row = int(self.position[1]) - 1 # 0,1,...,7
         diag_squares = bishop.update_reachable_squares(self, board=board)
         non_diag_squares = rook.update_reachable_squares(self, board=board)
-        self.reachable_squares = diag_squares + non_diag_squares
-        
+        self.reachable_squares = diag_squares + non_diag_squares     
         
 
 class king:
