@@ -384,7 +384,7 @@ class game:
                 raise Exception("The squares between the king and the rook should be empty.")
             castled_king = self.board[row][4]
             castled_rook = self.board[row][7]
-            if not castled_king.is_castle_legal or not castled_rook.is_castle_legal:
+            if not castled_king.has_not_moved or not castled_rook.has_not_moved:
                 raise Exception("The king or the rook has moved already.")
             # check if the squares that the king will pass through are threatened
             if castled_king.squares_threat_test(board=self.board, squares=[(row, 4), (row, 5), (row, 6)], king_square=(row, 4))[0] \
@@ -409,7 +409,7 @@ class game:
                 raise Exception("The squares between the king and the rook should be empty.")
             castled_king = self.board[row][4]
             castled_rook = self.board[row][0]
-            if not castled_king.is_castle_legal or not castled_rook.is_castle_legal:
+            if not castled_king.has_not_moved or not castled_rook.has_not_moved:
                 raise Exception("The king or the rook has moved already.")
             if castled_king.squares_threat_test(self.board, [(row, 4), (row, 3), (row, 2)], (row, 4))[0] == [(row, 4), (row, 3), (row, 2)]:
                 self.board[row][2] = castled_king
@@ -521,8 +521,9 @@ class game:
             
 # 6. add letters and numbers to the board visualization ?
 # 5. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
-# 4. scan all code and add comments and make it prettier and more modular if possible.
-# 3. work on the error messages, some cases are not really possible to get. 3+4 is together
+# 4. work on the error messages, some cases are not really possible to get. 
+# 3. scan all code and add comments and make it prettier and more modular if possible.
+
     
 class pawn: 
     def __init__(self, color, position):
@@ -646,17 +647,17 @@ class pawn:
                         self.reachable_squares.append((piece_row - 1, piece_col + 1))
 
 class rook:
-    def __init__(self, color, position, is_castle_legal=True):
+    def __init__(self, color, position, has_not_moved=True):
         """ 
         Initializes a rook object.
         Args:
             color (str): the color of the rook, either 'white' or 'black'.
             position (str): the position of the rook on the board, a string of length 2.
-            is_castle_legal (bool): a flag to indicate if the rook can castle or not (it's legal only if the rook hasn't moved yet).
+            has_not_moved (bool): a flag to indicate if the rook has moved (a condition for castling).
         """
         self.color = color
         self.position = position
-        self.is_castle_legal = is_castle_legal 
+        self.has_not_moved = has_not_moved 
         self.reachable_squares = []
 
     def __repr__(self) -> str:
@@ -672,7 +673,7 @@ class rook:
         if new_position[0] != self.position[0] and new_position[1] != self.position[1]:
             raise Exception("Rooks can only move in straight lines")
         self.position = new_position 
-        self.is_castle_legal = False # the rook can't castle anymore after it moved
+        self.has_not_moved = False # the rook can't castle anymore after it moved
 
     def reachable_squares_per_direction(self, board, squares_range, row, col, iterate_cols):
         """ 
@@ -874,6 +875,12 @@ class bishop:
         
 class queen(bishop, rook):
     def __init__(self, color, position):
+        """ 
+        Initializes a queen object.
+        Args:
+            color (str): the color of the queen, either 'white' or 'black'.
+            position (str): the position of the queen on the board, a string of length 2.
+        """
         self.color = color
         self.position = position
         self.reachable_squares = []
@@ -882,25 +889,41 @@ class queen(bishop, rook):
         return '  Q '
 
     def move(self, new_position, game=None):
+        """ 
+        Checks if the move is legal and updates the queen's position if it is.
+        Args:
+            new_position (str): the new position of the queen on the board, a string of length 2.
+            game (game, optional): not really used in this method, but it's here to keep the same method signature as the other pieces.
+        """
         if new_position[0] != self.position[0] and new_position[1] != self.position[1] \
             and abs(ord(new_position[0]) - ord(self.position[0])) != abs(int(new_position[1]) - int(self.position[1])):
             raise Exception("Queens can move in straight lines and diagonally")
         self.position = new_position
         
     def update_reachable_squares(self, board):
+        """ 
+        Updates the reachable squares of the queen using the bishop and rook methods.
+        Args:
+            board (list): a 2D list representing the board.
+        """
         self.reachable_squares = []
-        # piece_col = ord(self.position[0]) - 97 # 0,1,...,7
-        # piece_row = int(self.position[1]) - 1 # 0,1,...,7
-        diag_squares = bishop.update_reachable_squares(self, board=board)
-        non_diag_squares = rook.update_reachable_squares(self, board=board)
+        diag_squares = bishop.update_reachable_squares(self, board)
+        non_diag_squares = rook.update_reachable_squares(self, board)
         self.reachable_squares = diag_squares + non_diag_squares     
-        
 
 class king:
-    def __init__(self, color, position, is_castle_legal=True, has_castled=False):
+    def __init__(self, color, position, has_not_moved=True, has_castled=False):
+        """ 
+        Initializes a king object.
+        Args:
+            color (str): the color of the king, either 'white' or 'black'.
+            position (str): the position of the king on the board, a string of length 2.
+            has_not_moved (bool): a flag to indicate if the king hasn't moved (a condition for castling).
+            has_castled (bool): a flag to indicate if the king has castled (used for the testing function).
+        """
         self.color = color
         self.position = position
-        self.is_castle_legal = is_castle_legal
+        self.has_not_moved = has_not_moved
         self.has_castled = has_castled
         self.reachable_squares = [] # including threatened squares
         self.is_checked = False
@@ -909,19 +932,28 @@ class king:
         return '  K '
 
     def move(self, new_position, game=None):
+        """ 
+        Checks if the move is legal and updates the king's position if it is.
+        Args:
+            new_position (str): the new position of the king on the board, a string of length 2.
+            game (game, optional): not really used in this method, but it's here to keep the same method signature as the other pieces.
+        """
         if abs(ord(new_position[0]) - ord(self.position[0])) > 1 or abs(int(new_position[1]) - int(self.position[1])) > 1:
             raise Exception("Kings can only move one square in any direction")
         if game.sqaure_conversion_to_indices(new_position) not in self.reachable_squares:
             raise Exception("This square is threatened, you can't move your king to this square.")
         self.position = new_position
-        self.is_castle_legal = False    
+        self.has_not_moved = False    
         
-    
     def squares_threat_test(self, board, squares, king_square):       
         """
-        Checks if the squares in the input list are threatened by the opponent pieces on the board.
-        squares is a list of tuples.
-        king_square is the king's position as a tuple.
+        Checks if the squares in the list are threatened by the opponent pieces.
+        Args:
+            board (list): a 2D list representing the board.
+            squares (list): a list of tuples representing the squares to check.
+            king_square (tuple): a tuple representing the king's position on the board.
+        Returns:
+            A tuple containing the squares that are not threatened by the opponent pieces and the piece threatening the king (if the king is threatened).
         """
         self.is_checked = False
         unthreatened_inboard_squares = squares.copy()
@@ -929,7 +961,8 @@ class king:
         for tested_square in squares:             
             for row in board:
                 for square in row:
-                    if square is not None and square.color != self.color: # check if the opponent piece located in square is threatening the tested square 
+                    if square is not None and square.color != self.color: 
+                        # check if the opponent piece located in square is threatening the tested square 
                         if tested_square in square.reachable_squares: 
                             if tested_square in unthreatened_inboard_squares:
                                 unthreatened_inboard_squares.remove(tested_square)
@@ -939,25 +972,52 @@ class king:
         return unthreatened_inboard_squares, king_threatening_piece
 
     def update_reachable_squares(self, board):
+        """ 
+        Updates the reachable squares of the king.
+        Args:
+            board (list): a 2D list representing the board.
+        """
         self.reachable_squares = []
         piece_col = ord(self.position[0]) - 97 # 0,1,...,7
         piece_row = int(self.position[1]) - 1 # 0,1,...,7
+        # the king's reachable squares are the 8 squares around it.
         eight_squares = [(piece_row + 1, piece_col), (piece_row - 1, piece_col), (piece_row, piece_col + 1), (piece_row, piece_col - 1),
                          (piece_row + 1, piece_col + 1), (piece_row + 1, piece_col - 1), (piece_row - 1, piece_col + 1), (piece_row - 1, piece_col - 1)]
+        # remove the squares that are not on the board
         in_board_squares = [(row, col) for row, col in eight_squares if 0 <= row <= 7 and 0 <= col <= 7]
         in_board_squares_copy = in_board_squares.copy()
         for square in in_board_squares_copy:
             square_piece = board[square[0]][square[1]]
             if square_piece is not None and square_piece.color == self.color:
+                # remove the square if it's occupied by a piece of the same color
                 in_board_squares.remove(square)
+        # remove the squares that are threatened by the opponent pieces
         self.reachable_squares = self.squares_threat_test(board, in_board_squares, (piece_row, piece_col))[0]  
         
 
 
 # Execution (Playing the game)
-def play_game():
-    chess_game = game()
-    chess_game.update_reachable_squares_for_all_pieces() # relevant for knights only
+def play_game(chess_game=None, pieces=None, testing_specific_position=False):
+    """ 
+    Enables to play a game of chess using cmd input.
+    For playing from a specific position, the user should provide the game, a set of pieces objects and set the testing_specific_position flag to True.
+    For playing from the initial position, no arguments are needed.
+    Args:
+        chess_game (game, optional): an instance of a game class. If not provided, a new game is created.
+        pieces (set, optional): a set of pieces objects. If not provided, the board is initialized with the initial position.
+        testing_specific_position (bool, optional): a flag to indicate if the game is played from a specific position, used for testing purposes.
+    """
+    # playing a given position
+    if testing_specific_position: # testing a specific position of the game, game and pieces are provided by the user.
+        # building the board using the pieces list.
+        chess_game.board = [[None for _ in range(8)] for _ in range(8)]
+        for piece in pieces:
+            pos_tup = chess_game.sqaure_conversion_to_indices(piece.position)
+            chess_game.board[pos_tup[0]][pos_tup[1]] = piece
+    # playing an initial position
+    else:
+        chess_game = game()
+    chess_game.update_reachable_squares_for_all_pieces() # relevant for knights only if it's an initial position
     color_dict = {0: 'White', 1: 'Black'}
     while True:
         print(chess_game)
@@ -979,75 +1039,35 @@ def play_game():
         try:
             chess_game = chess_game.move_piece(cmd_input)
             # after a move was played legally - need to check if it's a draw by insufficient material.
-            # if chess_game.check_insufficient_material_draw():
-            #     print(chess_game)
-            #     print("It's a draw by insufficient material!")
-            #     exit()  
-            # # need to check if it's a stalemate draw.
-            # if chess_game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
-            #     stalemated_king = chess_game.board[chess_game.kings_positions[0][0]][chess_game.kings_positions[0][1]]
-            # else: # the opposite case
-            #     stalemated_king = chess_game.board[chess_game.kings_positions[1][0]][chess_game.kings_positions[1][1]]
-            # # only relevant if the king is not checked after a move was played.
-            # if not stalemated_king.is_checked:
-            #     if chess_game.check_stalemate_draw(stalemated_king):
-            #         print(chess_game)
-            #         print("It's a draw by a stalemate!")
-            #         exit()    
-        except Exception as e:
-            print(e)
-            continue
-        
-        
-def testing_given_game(game, pieces):
-    """ 
-    Given a specific occurance of a game, enables to play (using cmd input) from that given position of the game.
-    Not meant for users usage, only for development and testing.
-    Overall the logic should be similar to the play_game() function, 
-    with the exception of the game provided from a specific position and not an initial position.
-    """
-    # building the board using the pieces list.
-    game.board = [[None for _ in range(8)] for _ in range(8)]
-    for piece in pieces:
-        pos_tup = game.sqaure_conversion_to_indices(piece.position)
-        game.board[pos_tup[0]][pos_tup[1]] = piece
-    
-    game.update_reachable_squares_for_all_pieces() # relevant for knights only
-    color_dict = {0: 'White', 1: 'Black'}
-    while True:
-        print(game)
-        cmd_input = input(f"{color_dict[game.player_turn]}'s move: ")
-        if cmd_input == 'exit':
-            break
-        try:
-            game = game.move_piece(cmd_input)
-            # after a move was played legally - need to check if it's a draw by insufficient material.
-            if game.check_insufficient_material_draw():
-                print(game)
+            if chess_game.check_insufficient_material_draw():
+                print(chess_game)
                 print("It's a draw by insufficient material!")
                 exit()  
-            # need to check if it's a stalemate draw.
-            if game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
-                stalemated_king = game.board[game.kings_positions[0][0]][game.kings_positions[0][1]]
+            # need to check if it's a draw by stalemate.
+            if chess_game.player_turn == 0: # black played a move, need to check if the white king is stalemated.
+                stalemated_king = chess_game.board[chess_game.kings_positions[0][0]][chess_game.kings_positions[0][1]]
             else: # the opposite case
-                stalemated_king = game.board[game.kings_positions[1][0]][game.kings_positions[1][1]]
+                stalemated_king = chess_game.board[chess_game.kings_positions[1][0]][chess_game.kings_positions[1][1]]
             # only relevant if the king is not checked after a move was played.
             if not stalemated_king.is_checked:
-                if game.check_stalemate_draw(stalemated_king):
-                    print(game)
+                if chess_game.check_stalemate_draw(stalemated_king):
+                    print(chess_game)
                     print("It's a draw by a stalemate!")
-                    exit()      
+                    exit()        
         except Exception as e:
             print(e)
             continue
+        
+        
             
 if __name__ == "__main__":
-    play_game()
+    # play_game()
     
     # setting the testing pieces
     # kings
     black_king = king('black', 'h8')
     white_king = king('white', 'f2')
+    
     # black pieces
     black_bishop = bishop('black', 'f8')
     b_pawn1 = pawn('black', 'c7')
@@ -1070,15 +1090,17 @@ if __name__ == "__main__":
     w_pawn4 = pawn('white', 'g2')
 
     
-    kings = [black_king, white_king]
-    pieces = [black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop]
-    insufficient_draw_pieces = [black_king, white_king, white_rook_1, white_bishop_1]
-    stalemate_draw_pieces_1 = kings + [white_queen]
-    stalemate_draw_pieces_2 = kings + [white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2]
-    p = kings + [white_rook_2, white_pawn]
-    stalemate_draw_pieces_3 = stalemate_draw_pieces_2 + [b_pawn1, b_pawn2, b_pawn3, b_pawn4, w_pawn1, w_pawn3, w_pawn2]
-    stalemate_draw_pieces_4 = stalemate_draw_pieces_3 + [w_pawn4, b_pawn5]
+    kings = {black_king, white_king}
+    pieces = {black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop}
+    insufficient_draw_pieces = {black_king, white_king, white_rook_1, white_bishop_1}
+    stalemate_draw_pieces_1 = kings.union({white_queen})
+    stalemate_draw_pieces_2 = kings.union({white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2})
+    p = kings.union({white_rook_2, white_pawn})
+    stalemate_draw_pieces_3 = stalemate_draw_pieces_2.union({b_pawn1, b_pawn2, b_pawn3, b_pawn4, w_pawn1, w_pawn3, w_pawn2})
+    stalemate_draw_pieces_4 = stalemate_draw_pieces_3.union({w_pawn4, b_pawn5})
+    
     #initialize a new game    
     game_to_test = game(player_turn=0, move_cnt=40)
     
-    testing_given_game(game_to_test, stalemate_draw_pieces_4)
+    # testing the given game
+    play_game(game_to_test, stalemate_draw_pieces_4, True)
