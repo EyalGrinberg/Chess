@@ -1,7 +1,11 @@
+# 1. work on the error messages, some cases are not really possible to get. 
+# 2. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
+
+
+
 import copy # used for copying instances of class game and simulating moves.
 
 class game:
-    
     def __init__(self, player_turn=0, move_cnt=0):
         """
         Initializes the board and other attributes for an initial position of a chess game.
@@ -103,6 +107,7 @@ class game:
                     continue
                 elif square is not None:
                     square.update_reachable_squares(self.board)
+        # update kings_positions at the end to deal with cases of checks.
         kings[0].update_reachable_squares(self.board)
         kings[1].update_reachable_squares(self.board)
         # update kings_positions
@@ -291,12 +296,6 @@ class game:
         target_square = self.board[new_position_indices[0]][new_position_indices[1]]
         if target_square is not None and target_square.color == piece.color:
             raise Exception("The target square is already occupied.")
-        if piece.__class__ == pawn:
-            pawn_forward_reachable = self.get_pawn_forward_reachable_squares(piece)
-            if new_position_indices not in pawn_forward_reachable and piece.position[0] == new_position[0]:
-                raise Exception("That pawn is blocked by another piece.") # raised when I play e2e5 - need to fix it !!!!!!!!!!
-        elif new_position_indices not in piece.reachable_squares and piece.__class__ != king:
-            raise Exception("There is another piece in the way.")      
         # simulate the move and check its validity, if the move is legal - return the new game after the move was played.
         new_game = copy.deepcopy(self)
         piece = new_game.board[old_position_indices[0]][old_position_indices[1]] # its ok to override the piece since its the same piece anyway.
@@ -318,6 +317,10 @@ class game:
                 new_game.board[new_position_indices[0]][new_position_indices[1]] = knight(piece.color, new_position)
         else: # regular move
             piece.move(new_position, new_game)
+            # check if there is another piece in the way
+            if piece.__class__ != pawn:
+                if new_position_indices not in piece.reachable_squares and piece.__class__ != king:
+                    raise Exception("There is another piece in the way.")
             new_game.board[new_position_indices[0]][new_position_indices[1]] = piece
         # these lines should be executed for both promotion and regular move
         new_game.board[old_position_indices[0]][old_position_indices[1]] = None     
@@ -519,11 +522,6 @@ class game:
         # at this point we know the king is not checked, it can't move and there are no pieces that can move - it's a stalemate.
         return 1
             
-# 6. add letters and numbers to the board visualization ?
-# 5. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
-# 4. work on the error messages, some cases are not really possible to get. 
-# 3. scan all code and add comments and make it prettier and more modular if possible.
-
     
 class pawn: 
     def __init__(self, color, position):
@@ -537,6 +535,7 @@ class pawn:
         self.position = position
         self.two_squares = False # turns on only once in the game when a pawn is moving 2 squares forward and turns off the move after it.
         self.is_en_passant_capture = False # this flag indicates if a capture of the form "f5e6" is a regular capture or an en passant capture.
+        self.is_capture = False # this flag indicates if the move is a capture move.
         self.reachable_squares = [] # squares that the pawn can capture or threat (not including the forward squares).
 
     def __repr__(self) -> str:
@@ -549,16 +548,18 @@ class pawn:
             new_position (str): the new position of the pawn on the board, a string of length 2.
             game (game, optional): an instance of a game class. This function uses methods and attributes of the game class, instead of inheritance because a pawn 'is-not-a' game.
         """
-        new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
-        target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
-        if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
-            raise Exception("The pawn is blocked.")
+        # new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
+        # target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
+        # if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
+        #     raise Exception("The pawn is blocked.")
         self.is_en_passant_capture = False # turn the en passant flag off
+        self.is_capture = False # turn the capture flag off
         self.two_squares = False
         # check if it's a capture move
         if abs(ord(new_position[0]) - ord(self.position[0])) == 1:
             if int(new_position[1]) - int(self.position[1]) == 1 and game.player_turn == 0 or \
                 int(new_position[1]) - int(self.position[1]) == -1 and game.player_turn == 1:
+                    self.is_capture = True
                     self.capture(new_position, game)
             else:
                 raise Exception("Pawns cannot move that way.")
@@ -570,6 +571,23 @@ class pawn:
         if abs(int(new_position[1]) - int(self.position[1])) == 2:
             if self.position[1] != '2' and self.color == 'white' or self.position[1] != '7' and self.color == 'black':
                 raise Exception("Pawns can move 2 squares only from their opening position")
+            
+            
+            
+        new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
+        
+        
+        
+        # target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
+        # if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
+        #     raise Exception("The pawn is blocked.")
+        
+        
+        
+        # check if the pawn is blocked by another piece
+        pawn_forward_reachable = game.get_pawn_forward_reachable_squares(self)
+        if new_position_as_tup not in pawn_forward_reachable and self.position[0] == new_position[0] and not self.is_capture:
+            raise Exception("That pawn is blocked by another piece.")   
         # check if it's a 2 squares move
         if self.color == 'white' and self.position[1] == '2' and new_position[1] == '4':
             self.two_squares = True 
@@ -1061,7 +1079,7 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
         
             
 if __name__ == "__main__":
-    # play_game()
+    play_game()
     
     # setting the testing pieces
     # kings
