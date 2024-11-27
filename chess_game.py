@@ -1,7 +1,4 @@
-# 1. work on the error messages, some cases are not really possible to get. 
 # 2. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
-
-
 
 import copy # used for copying instances of class game and simulating moves.
 
@@ -293,9 +290,9 @@ class game:
             raise Exception("There is no piece at the input square.")
         if (self.player_turn == 0 and piece.color == 'black') or (self.player_turn == 1 and piece.color == 'white'):
             raise Exception("The chosen piece is not yours.")
-        target_square = self.board[new_position_indices[0]][new_position_indices[1]]
-        if target_square is not None and target_square.color == piece.color:
-            raise Exception("The target square is already occupied.")
+        # need to check if the target square is already occupied by another piece,
+        # but need to call the 'move' method of the piece first to prevent cases of 'd1f2' for example. 
+        target_square = self.board[new_position_indices[0]][new_position_indices[1]] 
         # simulate the move and check its validity, if the move is legal - return the new game after the move was played.
         new_game = copy.deepcopy(self)
         piece = new_game.board[old_position_indices[0]][old_position_indices[1]] # its ok to override the piece since its the same piece anyway.
@@ -306,6 +303,8 @@ class game:
             if promotion_piece not in ['Q', 'R', 'B', 'N']:
                 raise Exception("The promotion piece is not valid.")
             piece.move(new_position, new_game)
+            if target_square is not None and target_square.color == piece.color:
+                raise Exception("The target square is already occupied.")
             # create an instance of the promotion piece in the target square
             if promotion_piece == 'Q':
                 new_game.board[new_position_indices[0]][new_position_indices[1]] = queen(piece.color, new_position)
@@ -317,11 +316,13 @@ class game:
                 new_game.board[new_position_indices[0]][new_position_indices[1]] = knight(piece.color, new_position)
         else: # regular move
             piece.move(new_position, new_game)
+            if target_square is not None and target_square.color == piece.color:
+                raise Exception("The target square is already occupied.") 
             # check if there is another piece in the way
             if piece.__class__ != pawn:
                 if new_position_indices not in piece.reachable_squares and piece.__class__ != king:
                     raise Exception("There is another piece in the way.")
-            new_game.board[new_position_indices[0]][new_position_indices[1]] = piece
+            new_game.board[new_position_indices[0]][new_position_indices[1]] = piece        
         # these lines should be executed for both promotion and regular move
         new_game.board[old_position_indices[0]][old_position_indices[1]] = None     
         new_game.last_piece_moved = piece
@@ -548,10 +549,6 @@ class pawn:
             new_position (str): the new position of the pawn on the board, a string of length 2.
             game (game, optional): an instance of a game class. This function uses methods and attributes of the game class, instead of inheritance because a pawn 'is-not-a' game.
         """
-        # new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
-        # target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
-        # if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
-        #     raise Exception("The pawn is blocked.")
         self.is_en_passant_capture = False # turn the en passant flag off
         self.is_capture = False # turn the capture flag off
         self.two_squares = False
@@ -571,19 +568,7 @@ class pawn:
         if abs(int(new_position[1]) - int(self.position[1])) == 2:
             if self.position[1] != '2' and self.color == 'white' or self.position[1] != '7' and self.color == 'black':
                 raise Exception("Pawns can move 2 squares only from their opening position")
-            
-            
-            
         new_position_as_tup = game.sqaure_conversion_to_indices(new_position)
-        
-        
-        
-        # target_square = game.board[new_position_as_tup[0]][new_position_as_tup[1]]
-        # if target_square is not None and target_square.color != self.color and new_position[0] == self.position[0]:
-        #     raise Exception("The pawn is blocked.")
-        
-        
-        
         # check if the pawn is blocked by another piece
         pawn_forward_reachable = game.get_pawn_forward_reachable_squares(self)
         if new_position_as_tup not in pawn_forward_reachable and self.position[0] == new_position[0] and not self.is_capture:
@@ -1042,6 +1027,7 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
         cmd_input = input(f"{color_dict[chess_game.player_turn]}'s move: ")
         if cmd_input == 'exit':
             exit()
+        # draw offer
         if cmd_input == 'draw?':
             while True:
                 draw_response = input(f"{color_dict[1 - chess_game.player_turn]}'s response Y/N: ")
@@ -1054,6 +1040,12 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
                 else:
                     print("Invalid response to the draw offer.")
                     continue
+        # resignation
+        if cmd_input == 'resign':
+            print(chess_game)
+            print(f"{color_dict[1 - chess_game.player_turn]} wins by resignation of the {color_dict[chess_game.player_turn]} player!")
+            exit()
+        # try playing a move
         try:
             chess_game = chess_game.move_piece(cmd_input)
             # after a move was played legally - need to check if it's a draw by insufficient material.
