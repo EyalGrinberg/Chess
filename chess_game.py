@@ -1,9 +1,20 @@
 # 2. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
 
+# 3 fold:
+# 1. same position.
+# 2. same turn.
+# 3. same catle rights.
+# 4. same en passant.
+
+# 50 moves:
+# 1. 50 moves.
+# 2. no captures.
+# 3. no pawn moves.
+
 import copy # used for copying instances of class game and simulating moves.
 
 class game:
-    def __init__(self, player_turn=0, move_cnt=0):
+    def __init__(self, player_turn=0, move_cnt=0, move_cnt_50=0):
         """
         Initializes the board and other attributes for an initial position of a chess game.
         Args:
@@ -12,6 +23,7 @@ class game:
         """
         self.player_turn = player_turn # 0 for white, 1 for black
         self.move_cnt = move_cnt
+        self.move_cnt_50 = move_cnt_50 # counts the number of moves since the last capture or pawn move
         self.pieces_lst = [] # relevant only for insufficient material draw. 
         # will remain empty until move_cnt=30 since this type of draw is relevant only after 30 moves.
         self.last_piece_moved = None # used for checking the en passant case
@@ -222,7 +234,7 @@ class game:
         if king_position in blocking_squares:
             blocking_squares.remove(king_position)
         # now need to check if there's a piece of the king's side that can block the check or capture the threatening piece.
-        # start with an en passnt capture of the threatening piece.
+        # start with an en passant capture of the threatening piece.
         if threatening_piece.__class__ == pawn:
             en_passant_candidates = []
             for tup in (('white', 3, 'black'), ('black', 4, 'white')):
@@ -363,6 +375,11 @@ class game:
                 print(new_game)
                 print("White wins!")
                 exit()  
+        # reset the move_cnt_50 if there was a capture or a pawn move
+        if piece.__class__ == pawn or target_square is not None: # by now the target square is not the same color as the piece
+            new_game.move_cnt_50 = 0
+        else:
+            new_game.move_cnt_50 += 1
         # it's a legal move that doesn't end with a mate - return the updated game
         return new_game
                                       
@@ -1063,7 +1080,12 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
                 if chess_game.check_stalemate_draw(stalemated_king):
                     print(chess_game)
                     print("It's a draw by a stalemate!")
-                    exit()        
+                    exit()       
+            # need to check if it's a draw by the 50-move rule.
+            if chess_game.move_cnt_50 == 100:
+                print(chess_game)
+                print("It's a draw by the 50-move rule!")
+                exit() 
         except Exception as e:
             print(e)
             continue
@@ -1071,7 +1093,7 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
         
             
 if __name__ == "__main__":
-    play_game()
+    # play_game()
     
     # setting the testing pieces
     # kings
@@ -1088,7 +1110,7 @@ if __name__ == "__main__":
     
     # white pieces 
     white_rook_1 = rook('white', 'd8')
-    white_rook_2 = rook('white', 'h1')
+    white_rook_2 = rook('white', 'g1')
     white_bishop_1 = bishop('white', 'g5')
     white_knight_1 = knight('white', 'g7')
     white_knight_2 = knight('white', 'f5')
@@ -1103,6 +1125,7 @@ if __name__ == "__main__":
     kings = {black_king, white_king}
     pieces = {black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop}
     insufficient_draw_pieces = {black_king, white_king, white_rook_1, white_bishop_1}
+    pieces_50 = {black_king, white_king, white_rook_1, white_rook_2, black_bishop}
     stalemate_draw_pieces_1 = kings.union({white_queen})
     stalemate_draw_pieces_2 = kings.union({white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2})
     p = kings.union({white_rook_2, white_pawn})
@@ -1110,7 +1133,7 @@ if __name__ == "__main__":
     stalemate_draw_pieces_4 = stalemate_draw_pieces_3.union({w_pawn4, b_pawn5})
     
     #initialize a new game    
-    game_to_test = game(player_turn=0, move_cnt=40)
+    game_to_test = game(player_turn=0, move_cnt=40, move_cnt_50=98)
     
     # testing the given game
-    play_game(game_to_test, stalemate_draw_pieces_4, True)
+    play_game(game_to_test, pieces_50, True)
