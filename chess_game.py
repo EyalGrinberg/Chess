@@ -1,21 +1,3 @@
-# fix bug testing function V
-# add simulation in the test_stalemate function to check if a pawn can really capture en passant and that it's not pinned. V
-# the two_squares flag should be turned off the turn after the pawn moved 2 squares. V
-# b7b5Q actually plays b7b5, need to fix the promotion case. V
-# add the en passant flag to the pawn class and update it using the relevant en passant code inside the stalemate function - instead just implement again at the end of check king threat method. make sure to turn it off two turns after it.
-# add dict for the 3-fold repetition
-
-
-
-
-# 2. complex draws: (later treat cases of more advanced draws: 3 times repetiton and 50 moves without capturing)
-
-# 3 fold:
-# 1. same position.
-# 2. same turn.
-# 3. same catle rights.
-# 4. same en passant.
-
 import copy # used for copying instances of class game and simulating moves.
 
 class game:
@@ -83,35 +65,6 @@ class game:
         """The game is represented by the board matrix which contains the pieces."""
         # for simplicity the board matrix upper left corner is (0,0) and the bottom right corner is (7,7), but when printed it should be reverted.
         return "\n".join([str(row) for row in self.board][::-1])
-    
-    # delete!
-    def __eq__(self, other): 
-        """
-        Compares two instances of the game class.
-        The comparison is based on the board matrix and the player_turn attribute.
-        """
-        # used for the 3-fold repetition draw to check if two positions are the same.
-        return isinstance(other, game) and self.board == other.board and self.player_turn == other.player_turn
-    
-    def __hash__(self):
-        # Convert the board to a tuple of tuples for hashing purposes
-        return hash(tuple(tuple(row) for row in self.board))
-    
-    # def __hash__(self):
-    #     """
-    #     Return a hash value based on the attributes used in __eq__
-    #     """
-    #     print("in hash of game")
-    #     print(self.player_turn)
-    #     # Convert nested_list to a tuple of tuples for hashing
-    #     def nested_tuple(lst):
-    #         return tuple(nested_tuple(i) if isinstance(i, list) else i for i in lst)
-
-    #     board_as_tups = nested_tuple(self.board)
-    #     print("after recursion")
-    #     hash_res = hash((board_as_tups, self.player_turn))
-    #     print(hash_res)
-    #     return hash_res
     
     def sqaure_conversion_to_indices(self, square):
         """
@@ -216,10 +169,6 @@ class game:
             sim_game = sim_game.move_piece(cmd)
             return 1
         except Exception as e:
-            # delete!
-            # it doesn't really matter which exceptions are raised but it should be one of these two, it's mainly for readability
-            # Exception("Your king is being checked, you cannot play this move.") 
-            # Exception("The chosen piece is pinned.")
             return 0 
     
     def test_mate(self, game, threatened_king, king_position):
@@ -244,9 +193,6 @@ class game:
                 if self.move_simulation(game, cmd):
                     # if the simulation worked properly, there exists a reachable square that the king can escape to
                     return 0
-                # delete!
-                # else: # otherwise it's not a legal escape from the check
-                #     continue
         # by now we know the king is checked and it can't escape the check, 
         # need to check if there is a piece that can block the check or capture the threatening piece.
         threatening_piece = threatened_king.squares_threat_test(game.board, [king_position], king_position)[1]
@@ -305,9 +251,6 @@ class game:
                     cmd += '6'
                 if self.move_simulation(game, cmd):
                     return 0
-                # delete!
-                # else:
-                #     continue
         # blocking the check
         for row in game.board:
             for square in row:
@@ -323,10 +266,7 @@ class game:
                         if block in reachable_lst:
                             cmd = square.position + self.square_conversion_from_indices_to_str(block)
                             if self.move_simulation(game, cmd):
-                                return 0
-                            # delete!
-                            # else:
-                            #     continue                          
+                                return 0                         
         # there is no escaping, capturing or blocking option - it's a mate.
         return 1 
                         
@@ -435,7 +375,6 @@ class game:
             new_game.move_cnt_50 = 0
         else:
             new_game.move_cnt_50 += 1        
-        
         # it's a legal move that doesn't end with a mate - return the updated game   
         return new_game
                                       
@@ -576,9 +515,6 @@ class game:
                 if self.move_simulation(self, cmd):
                     ret = 0 # the king can move
                     break
-                # delete!
-                # else:
-                #     continue
         # at this point we know the king is not checked and it can't move.
         # need to check if there is a piece of the king color that can move (legally)
         # starting with the en passant option since it's a lot different and could save the for loops that come afterwards.
@@ -607,9 +543,6 @@ class game:
                     # the last moved piece is a pawn that can be captured en passant
                     self.last_piece_moved.can_be_captured_en_passant = True 
                     break
-                # delete!
-                # else:
-                #     continue
         # checking all the pieces' reachable squares
         for row in self.board:
             for square in row:
@@ -627,9 +560,6 @@ class game:
                                 ret = 0
                                 break_cond = True
                                 break
-                            # delete!
-                            # else:
-                            #     continue 
                 if break_cond:
                     break
             if break_cond:
@@ -643,10 +573,6 @@ class game:
         Returns:
             1 if the game is in a three-fold repetition draw position, 0 otherwise.
         """
-        # delete!
-       # print("----------------------------")
-        # print(self.board)
-        # print("----------------------------")
         board_of_tups = copy.deepcopy(self.board)
         for i in range(8):
             for j in range(8):
@@ -681,20 +607,6 @@ class pawn:
 
     def __repr__(self) -> str:
         return '  P '
-    
-    #delete!
-    
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two pawns are equal. 
-    #     Two pawns are equal if they have the same color and same en passant situation.
-    #     When comparing two pawn objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, pawn) and self.color == other.color and self.can_be_captured_en_passant == other.can_be_captured_en_passant and self.position == other.position
-    
-    # def __hash__(self):
-    #     # print(hash((self.color, self.can_be_captured_en_passant, self.position)))
-    #     return hash((self.color, self.can_be_captured_en_passant, self.position))
 
     def move(self, new_position, game):
         """
@@ -809,6 +721,7 @@ class pawn:
         """
         return (self.__class__, self.color, self.can_be_captured_en_passant)
 
+
 class rook:
     def __init__(self, color, position, has_not_moved=True, has_castled=False):
         """ 
@@ -827,18 +740,6 @@ class rook:
 
     def __repr__(self) -> str:
         return '  R '
-    
-    #delete!
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two rooks are equal.
-    #     Two rooks are equal if they have the same color and the same castling rights.
-    #     When comparing two rook objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, rook) and self.color == other.color and self.has_castled == other.has_castled and self.position == other.position
-    
-    # def __hash__(self):
-    #     return hash((self.color, self.has_castled, self.position))
 
     def move(self, new_position, game=None):
         """ 
@@ -914,6 +815,7 @@ class rook:
         Returns a tuple representation of the required attributes of the rook object to be used in the 3-fold repetition rule.
         """
         return (self.__class__, self.color, self.has_castled)                              
+      
         
 class knight:
     def __init__(self, color, position):
@@ -929,17 +831,6 @@ class knight:
 
     def __repr__(self) -> str:
         return '  N '
-    # delete!
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two knights are equal.
-    #     Two knights are equal if they have the same color.
-    #     When comparing two knight objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, knight) and self.color == other.color and self.position == other.position
-    
-    # def __hash__(self):
-    #     return hash((self.color, self.position))
 
     def move(self, new_position, game=None):
         """ 
@@ -978,6 +869,7 @@ class knight:
         """
         return (self.__class__, self.color)
         
+        
 class bishop:
     def __init__(self, color, position):
         """ 
@@ -992,17 +884,6 @@ class bishop:
 
     def __repr__(self) -> str:
         return '  B '
-    # delete!
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two bishops are equal.
-    #     Two bishops are equal if they have the same color.
-    #     When comparing two bishop objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, bishop) and self.color == other.color and self.position == other.position
-    
-    # def __hash__(self):
-    #     return hash((self.color, self.position))
 
     def move(self, new_position, game=None):
         """ 
@@ -1090,6 +971,7 @@ class bishop:
         """
         return (self.__class__, self.color)
     
+    
 class queen(bishop, rook):
     # a queen is a combination of a bishop and a rook
     def __init__(self, color, position):
@@ -1105,17 +987,6 @@ class queen(bishop, rook):
 
     def __repr__(self) -> str:
         return '  Q '
-    # delete!
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two queens are equal.
-    #     Two queens are equal if they have the same color.
-    #     When comparing two queen objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, queen) and self.color == other.color and self.position == other.position
-    
-    # def __hash__(self):
-    #     return hash((self.color, self.position))
 
     def move(self, new_position, game=None):
         """ 
@@ -1146,6 +1017,7 @@ class queen(bishop, rook):
         """
         return (self.__class__, self.color)        
 
+
 class king:
     def __init__(self, color, position, has_not_moved=True, has_castled=False):
         """ 
@@ -1165,17 +1037,6 @@ class king:
 
     def __repr__(self) -> str:
         return '  K '
-    # delete!
-    # def __eq__(self, other):
-    #     """
-    #     Checks if two kings are equal.
-    #     Two kings are equal if they have the same color and the same castling rights.
-    #     When comparing two king objects, they are in the same position on the board.
-    #     """
-    #     return isinstance(other, king) and self.color == other.color and self.has_castled == other.has_castled and self.position == other.position
-
-    # def __hash__(self):
-    #     return hash((self.color, self.has_castled, self.position))
 
     def move(self, new_position, game=None):
         """ 
@@ -1330,51 +1191,51 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
 if __name__ == "__main__":
     play_game()
         
-    # setting the testing pieces
-    # kings
-    black_king = king('black', 'h6')
-    white_king = king('white', 'c2')
+    # # setting the testing pieces
+    # # kings
+    # black_king = king('black', 'h6')
+    # white_king = king('white', 'c2')
     
-    # black pieces
-    black_bishop = bishop('black', 'c1')
-    b_pawn1 = pawn('black', 'a7')
-    b_pawn2 = pawn('black', 'b6')
-    b_pawn3 = pawn('black', 'd6')
-    b_pawn4 = pawn('black', 'd5')
-    b_pawn5 = pawn('black', 'h4')
+    # # black pieces
+    # black_bishop = bishop('black', 'c1')
+    # b_pawn1 = pawn('black', 'a7')
+    # b_pawn2 = pawn('black', 'b6')
+    # b_pawn3 = pawn('black', 'd6')
+    # b_pawn4 = pawn('black', 'd5')
+    # b_pawn5 = pawn('black', 'h4')
     
-    # white pieces 
-    white_rook_1 = rook('white', 'h3')
-    white_rook_2 = rook('white', 'g1')
-    white_bishop_1 = bishop('white', 'g5')
-    white_knight_1 = knight('white', 'g2')
-    white_knight_2 = knight('white', 'f5')
-    white_pawn = pawn('white', 'h7')
-    white_queen = queen('white', 'g8')
-    w_pawn1 = pawn('white', 'a2')
-    w_pawn2 = pawn('white', 'b3')
-    w_pawn3 = pawn('white', 'd4')
-    w_pawn4 = pawn('white', 'g2')
+    # # white pieces 
+    # white_rook_1 = rook('white', 'h3')
+    # white_rook_2 = rook('white', 'g1')
+    # white_bishop_1 = bishop('white', 'g5')
+    # white_knight_1 = knight('white', 'g2')
+    # white_knight_2 = knight('white', 'f5')
+    # white_pawn = pawn('white', 'h7')
+    # white_queen = queen('white', 'g8')
+    # w_pawn1 = pawn('white', 'a2')
+    # w_pawn2 = pawn('white', 'b3')
+    # w_pawn3 = pawn('white', 'd4')
+    # w_pawn4 = pawn('white', 'g2')
 
-    # pieces_set = set()
-    # pieces_set.add(black_king)
-    # pieces_set.add(white_king)
-    # pieces = {black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop}
-    # insufficient_draw_pieces = {black_king, white_king, white_rook_1, white_bishop_1}
-    # pieces_50 = {black_king, white_king, white_rook_1, white_rook_2, black_bishop}
-    # stalemate_draw_pieces_1 = kings.union({white_queen})
-    # stalemate_draw_pieces_2 = kings.union({white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2})
-    # p = kings.union({white_rook_2, white_pawn})
-    # stalemate_draw_pieces_3 = stalemate_draw_pieces_2.union({b_pawn1, b_pawn2, b_pawn3, b_pawn4, w_pawn1, w_pawn3, w_pawn2})
-    # stalemate_draw_pieces_4 = stalemate_draw_pieces_3.union({w_pawn4, b_pawn5})
-    stalemate_with_en_passant = [black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5]
-    kings = {black_king, white_king}
-    fold = kings.union({w_pawn1, w_pawn2, b_pawn1, b_pawn2,white_knight_1, black_bishop})
-    en_pass_mate_test = {black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5,black_bishop}
+    # # pieces_set = set()
+    # # pieces_set.add(black_king)
+    # # pieces_set.add(white_king)
+    # # pieces = {black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop}
+    # # insufficient_draw_pieces = {black_king, white_king, white_rook_1, white_bishop_1}
+    # # pieces_50 = {black_king, white_king, white_rook_1, white_rook_2, black_bishop}
+    # # stalemate_draw_pieces_1 = kings.union({white_queen})
+    # # stalemate_draw_pieces_2 = kings.union({white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2})
+    # # p = kings.union({white_rook_2, white_pawn})
+    # # stalemate_draw_pieces_3 = stalemate_draw_pieces_2.union({b_pawn1, b_pawn2, b_pawn3, b_pawn4, w_pawn1, w_pawn3, w_pawn2})
+    # # stalemate_draw_pieces_4 = stalemate_draw_pieces_3.union({w_pawn4, b_pawn5})
+    # stalemate_with_en_passant = [black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5]
+    # kings = {black_king, white_king}
+    # fold = kings.union({w_pawn1, w_pawn2, b_pawn1, b_pawn2,white_knight_1, black_bishop})
+    # en_pass_mate_test = {black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5,black_bishop}
     
     
-    #initialize a new game    
-    game_to_test = game(player_turn=0, move_cnt=0, move_cnt_50=0)
+    # #initialize a new game    
+    # game_to_test = game(player_turn=0, move_cnt=0, move_cnt_50=0)
     
-    # testing the given game
-    play_game(game_to_test, en_pass_mate_test, True)
+    # # testing the given game
+    # play_game(game_to_test, en_pass_mate_test, True)
