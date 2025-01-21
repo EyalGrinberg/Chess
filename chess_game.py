@@ -1189,53 +1189,6 @@ def play_game(chess_game=None, pieces=None, testing_specific_position=False):
         
             
 if __name__ == "__main__":
+    # playing the game from the initial position 
     play_game()
-        
-    # # setting the testing pieces
-    # # kings
-    # black_king = king('black', 'h6')
-    # white_king = king('white', 'c2')
     
-    # # black pieces
-    # black_bishop = bishop('black', 'c1')
-    # b_pawn1 = pawn('black', 'a7')
-    # b_pawn2 = pawn('black', 'b6')
-    # b_pawn3 = pawn('black', 'd6')
-    # b_pawn4 = pawn('black', 'd5')
-    # b_pawn5 = pawn('black', 'h4')
-    
-    # # white pieces 
-    # white_rook_1 = rook('white', 'h3')
-    # white_rook_2 = rook('white', 'g1')
-    # white_bishop_1 = bishop('white', 'g5')
-    # white_knight_1 = knight('white', 'g2')
-    # white_knight_2 = knight('white', 'f5')
-    # white_pawn = pawn('white', 'h7')
-    # white_queen = queen('white', 'g8')
-    # w_pawn1 = pawn('white', 'a2')
-    # w_pawn2 = pawn('white', 'b3')
-    # w_pawn3 = pawn('white', 'd4')
-    # w_pawn4 = pawn('white', 'g2')
-
-    # # pieces_set = set()
-    # # pieces_set.add(black_king)
-    # # pieces_set.add(white_king)
-    # # pieces = {black_king, white_king, white_rook_1, white_rook_2, white_bishop_1, white_pawn, black_bishop}
-    # # insufficient_draw_pieces = {black_king, white_king, white_rook_1, white_bishop_1}
-    # # pieces_50 = {black_king, white_king, white_rook_1, white_rook_2, black_bishop}
-    # # stalemate_draw_pieces_1 = kings.union({white_queen})
-    # # stalemate_draw_pieces_2 = kings.union({white_rook_1, white_rook_2, white_pawn, black_bishop, white_knight_1, white_knight_2})
-    # # p = kings.union({white_rook_2, white_pawn})
-    # # stalemate_draw_pieces_3 = stalemate_draw_pieces_2.union({b_pawn1, b_pawn2, b_pawn3, b_pawn4, w_pawn1, w_pawn3, w_pawn2})
-    # # stalemate_draw_pieces_4 = stalemate_draw_pieces_3.union({w_pawn4, b_pawn5})
-    # stalemate_with_en_passant = [black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5]
-    # kings = {black_king, white_king}
-    # fold = kings.union({w_pawn1, w_pawn2, b_pawn1, b_pawn2,white_knight_1, black_bishop})
-    # en_pass_mate_test = {black_king, white_king, white_rook_1, w_pawn4, white_queen, b_pawn5,black_bishop}
-    
-    
-    # #initialize a new game    
-    # game_to_test = game(player_turn=0, move_cnt=0, move_cnt_50=0)
-    
-    # # testing the given game
-    # play_game(game_to_test, en_pass_mate_test, True)
