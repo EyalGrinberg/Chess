@@ -103,6 +103,11 @@ class ChessGUI:
                 self.game = self.game.move_piece(move)
                 self.update_board()
 
+                # it's important to check for the threefold repetition draw before checking for checkmate because the game state will change in case of a mate
+                if self.game.check_three_fold_repetition_draw():
+                    messagebox.showinfo("Game Over", "Draw by threefold repetition!")
+                    self.reset_game()
+
                 if self.game.is_mate:
                     messagebox.showinfo("Game Over", f"Checkmate! {self.color_dict[1 - self.game.player_turn]} wins!")
                     self.reset_game()
@@ -110,12 +115,12 @@ class ChessGUI:
                     self.info_label.config(text=f"{self.color_dict[self.game.player_turn]}'s turn")
 
                 # Check for draw conditions
-                if self.game.check_three_fold_repetition_draw():
-                    messagebox.showinfo("Game Over", "Draw by threefold repetition!")
-                    self.reset_game()
-
-                elif self.game.check_stalemate_draw(self.get_stalemated_king()):
+                if self.game.check_stalemate_draw(self.get_stalemated_king()):
                     messagebox.showinfo("Game Over", "Draw by stalemate!")
+                    self.reset_game()
+                
+                elif self.game.check_insufficient_material_draw():
+                    messagebox.showinfo("Game Over", "Draw by insufficient material!")
                     self.reset_game()
 
                 elif self.game.move_cnt_50 == 100:
@@ -127,8 +132,10 @@ class ChessGUI:
 
     def is_castling_move(self, from_square, to_square):
         king_row, king_col = from_square
+        if self.game.player_turn == 0 and king_row == 7 or self.game.player_turn == 1 and king_row == 0:
+            return False
         to_row, to_col = to_square
-        if self.game.board[king_row][king_col].__class__.__name__ == 'king' and abs(king_col - to_col) == 2:
+        if self.game.board[king_row][king_col].__class__.__name__ == 'king' and abs(king_col - to_col) == 2 and king_row == to_row:
             return True
         return False
 
