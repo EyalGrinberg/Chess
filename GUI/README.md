@@ -4,7 +4,7 @@
 
 This project is a graphical user interface (GUI) implementation of a chess game built using Python and Tkinter. It allows two players to play chess against each other in an interactive, visually appealing environment.
 
-The game supports all standard chess rules, including castling, pawn promotion, and draw conditions.
+The game supports all standard chess rules.
 
 ## How to Play
 
@@ -14,7 +14,8 @@ Players take turns interacting with the board using their mouse.
 
 - **Regular Move:** Click on the piece you want to move, then click on the destination square.
 - **Pawn Promotion:** If a pawn reaches the last row, a dialog will prompt the player to choose a promotion piece (Queen, Rook, Bishop, or Knight).
-- **Castling:** Click on the king, then click two squares to the right for short castling or two squares to the left for long castling.
+- **Castling:** Click on the king, then click two squares from the king towards the rook that you want to castle with. <br/>
+  For the white player it would be two squares to the right for short castling or two squares to the left for long castling.
 
 ### Non-Chess Moves
 
@@ -22,12 +23,16 @@ Players take turns interacting with the board using their mouse.
 - **Draw Offer:** Click the "Offer Draw" button to propose a draw.
 - **Reset Game:** Click the "Reset Game" button to restart the game.
 
-### Draw Conditions Supported
+### Draw Conditions 
 
-- **Threefold Repetition:** The game detects when the same board position occurs three times.
-- **Stalemate:** The game ends in a draw if a player has no legal moves and is not in check.
-- **50-Move Rule:** The game automatically detects and draws after 50 moves without a pawn move or capture.
-- **Insufficient Material:** The game detects if neither player has enough pieces to deliver checkmate.
+The program supports all standard chess draw conditions:
+
+1. **Draw Offer Accepted**: Both players agree to a draw.
+2. **Insufficient Material**: Not enough material to deliver checkmate.
+3. **Stalemate**: No legal moves, and the current player is not in check.
+4. **Threefold Repetition**: The same board position occurs three times. Two positions are by definition "the same" if the same types of pieces occupy the same squares, the same player has the move, the remaining castling rights are the same and the possibility to capture en passant is the same.
+5. **50-Move Rule**: 50 consecutive moves are made without a pawn move or a capture.
+
 
 ## Project Structure
 
@@ -57,8 +62,9 @@ GUI Chess Game
 
 1. The game starts with white making the first move.
 2. Players alternate turns by interacting with the board.
-3. The game continues until checkmate, draw, or resignation.
-4. The GUI will display messages for game-ending conditions.
+3. For any invalid move a relevant message will be displayed and the player will be able to try and play a legal move instead.
+4. The game continues until checkmate, draw, or resignation.
+5. The GUI will display messages for game-ending conditions.
 
 ## Design and Class Structure
 
