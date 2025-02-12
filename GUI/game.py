@@ -304,6 +304,8 @@ class game:
             raise Exception("There is no piece at the input square.")
         if (self.player_turn == 0 and piece.color == 'black') or (self.player_turn == 1 and piece.color == 'white'):
             raise Exception("The chosen piece is not yours.")
+        if old_position == new_position:
+            raise Exception("The piece is already at the target square.")
         # need to check if the target square is already occupied by another piece,
         # but need to call the 'move' method of the piece first to prevent cases of 'd1f2' for example. 
         target_square = self.board[new_position_indices[0]][new_position_indices[1]] 
@@ -319,7 +321,7 @@ class game:
             # promotions are only at the last rank of the board.
             if piece.color == 'white' and new_position_indices[0] != 7 or piece.color == 'black' and new_position_indices[0] != 0:
                 raise Exception("The pawn can't be promoted at this position.")
-            piece.move(new_position, new_game)
+            piece.move(new_position, new_game)            
             if target_square is not None and target_square.color == piece.color:
                 raise Exception("The target square is already occupied.")
             # create an instance of the promotion piece in the target square

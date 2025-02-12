@@ -32,7 +32,11 @@ class king:
         """
         if abs(ord(new_position[0]) - ord(self.position[0])) > 1 or abs(int(new_position[1]) - int(self.position[1])) > 1:
             raise Exception("Kings can only move one square in any direction")
-        if game.sqaure_conversion_to_indices(new_position) not in self.reachable_squares:
+        new_pos_as_tup = game.sqaure_conversion_to_indices(new_position)
+        target_square = game.board[new_pos_as_tup[0]][new_pos_as_tup[1]]
+        if target_square is not None and target_square.color == self.color:
+            raise Exception("The target square is already occupied.") 
+        if new_pos_as_tup not in self.reachable_squares:
             raise Exception("This square is threatened, you can't move your king to this square.")
         self.position = new_position
         self.has_not_moved = False    
