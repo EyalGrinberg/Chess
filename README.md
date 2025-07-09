@@ -8,6 +8,8 @@ This repository contains two versions of a chess game project implemented in Pyt
 
 Both versions support all standard chess rules.
 
+For an overview of the project, [view the Chess Game presentation (PPTX)](Chess%20Game%20presentation.pptx).
+
 ## Instructions
 Choose the appropriate folder based on the version you want to play:
 
